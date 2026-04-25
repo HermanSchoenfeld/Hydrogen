@@ -19,6 +19,11 @@ namespace Sphere10.Framework.Tests.ObjectSpaces;
 [TestFixture]
 public class ObjectSpaceIntegrationTests {
 
+	private static void Save<T>(ObjectSpace os, TestTraits traits, T obj) {
+		if (!traits.HasFlag(TestTraits.PersistentIgnorant))
+			os.Save(obj);
+	}
+
 	#region Activation
 
 	[Test]
@@ -39,7 +44,7 @@ public class ObjectSpaceIntegrationTests {
 			var id = os.New<SB.Identity>();
 			id.Name = "generic-id";
 			id.PublicKey = new byte[] { 0xAA, 0xBB };
-			os.Save(id);
+			Save(os, traits, id);
 			Validate(os);
 			os.Flush();
 			objectSpaceBytes = os.Streams.RootStream.ToArray();
@@ -59,7 +64,7 @@ public class ObjectSpaceIntegrationTests {
 			var id = os.New<SB.Identity>();
 			id.Name = "bob";
 			id.PublicKey = new byte[] { 0x01 };
-			os.Save(id);
+			Save(os, traits, id);
 			var fetched = os.Get((SB.Identity x) => x.Name, "bob");
 			Assert.That(fetched, Is.SameAs(id));
 			Validate(os);
@@ -76,7 +81,7 @@ public class ObjectSpaceIntegrationTests {
 	}
 
 	[Test]
-	[TestCaseSource(typeof(SafeBoxTestHelper), nameof(SafeBoxTestHelper.AllTestCases))]
+	[TestCaseSource(typeof(SafeBoxTestHelper), nameof(SafeBoxTestHelper.NonPersistentIgnorantTestCases))]
 	public void Identity_UniqueNameProhibitsDuplicate(TestTraits traits) {
 		using var os = SafeBoxTestHelper.CreateSafeBoxObjectSpace(traits);
 		var id1 = os.New<SB.Identity>();
@@ -87,8 +92,6 @@ public class ObjectSpaceIntegrationTests {
 			id2.Name = "dup";
 			os.Save(id2);
 		}, Throws.InvalidOperationException);
-		if (traits.HasFlag(TestTraits.PersistentIgnorant))
-			os.AutoSave = false;
 	}
 
 	[Test]
@@ -98,7 +101,7 @@ public class ObjectSpaceIntegrationTests {
 		using (var os = SafeBoxTestHelper.CreateSafeBoxObjectSpace(traits)) {
 			var id = os.New<SB.Identity>();
 			id.Name = "todelete";
-			os.Save(id);
+			Save(os, traits, id);
 			Assert.That(os.Count<SB.Identity>(), Is.EqualTo(1));
 			os.Delete(id);
 			Validate(os);
@@ -122,9 +125,9 @@ public class ObjectSpaceIntegrationTests {
 			var id = os.New<SB.Identity>();
 			id.Name = "updatable";
 			id.PublicKey = new byte[] { 0x01 };
-			os.Save(id);
+			Save(os, traits, id);
 			id.PublicKey = new byte[] { 0x02, 0x03 };
-			os.Save(id);
+			Save(os, traits, id);
 			Validate(os);
 			os.Flush();
 			objectSpaceBytes = os.Streams.RootStream.ToArray();
@@ -150,7 +153,7 @@ public class ObjectSpaceIntegrationTests {
 			user.PublicKey = new byte[] { 0xAA };
 			user.Email = "alice@example.com";
 			user.DisplayName = "Alice";
-			os.Save(user);
+			Save(os, traits, user);
 			Validate(os);
 			os.Flush();
 			objectSpaceBytes = os.Streams.RootStream.ToArray();
@@ -171,7 +174,7 @@ public class ObjectSpaceIntegrationTests {
 			user.Name = "carol";
 			user.Email = "carol@example.com";
 			user.DisplayName = "Carol";
-			os.Save(user);
+			Save(os, traits, user);
 			var fetched = os.Get((SB.User x) => x.Name, "carol");
 			Assert.That(fetched, Is.SameAs(user));
 			Validate(os);
@@ -195,10 +198,10 @@ public class ObjectSpaceIntegrationTests {
 			user.Name = "dave";
 			user.DisplayName = "Before";
 			user.Email = "dave@old.com";
-			os.Save(user);
+			Save(os, traits, user);
 			user.DisplayName = "After";
 			user.Email = "dave@new.com";
-			os.Save(user);
+			Save(os, traits, user);
 			Validate(os);
 			os.Flush();
 			objectSpaceBytes = os.Streams.RootStream.ToArray();
@@ -223,15 +226,15 @@ public class ObjectSpaceIntegrationTests {
 			var user1 = os.New<SB.User>();
 			user1.Name = "user1";
 			user1.Email = "user1@example.com";
-			os.Save(user1);
+			Save(os, traits, user1);
 			var user2 = os.New<SB.User>();
 			user2.Name = "user2";
 			user2.Email = "user2@example.com";
-			os.Save(user2);
+			Save(os, traits, user2);
 			var group = os.New<SB.Group>();
 			group.Name = "admins";
 			group.Members = new SB.Identity[] { user1, user2 };
-			os.Save(group);
+			Save(os, traits, group);
 			Assert.That(os.Count<SB.User>(), Is.EqualTo(2));
 			Assert.That(os.Count<SB.Group>(), Is.EqualTo(1));
 			var fetched = os.Get((SB.Group x) => x.Name, "admins");
@@ -262,19 +265,19 @@ public class ObjectSpaceIntegrationTests {
 			var plainId = os.New<SB.Identity>();
 			plainId.Name = "service-account";
 			plainId.PublicKey = new byte[] { 0xFF };
-			os.Save(plainId);
+			Save(os, traits, plainId);
 			var user = os.New<SB.User>();
 			user.Name = "human-user";
 			user.Email = "human@example.com";
-			os.Save(user);
+			Save(os, traits, user);
 			var innerGroup = os.New<SB.Group>();
 			innerGroup.Name = "inner-team";
 			innerGroup.Members = new SB.Identity[] { user };
-			os.Save(innerGroup);
+			Save(os, traits, innerGroup);
 			var outerGroup = os.New<SB.Group>();
 			outerGroup.Name = "all-access";
 			outerGroup.Members = new SB.Identity[] { plainId, user, innerGroup };
-			os.Save(outerGroup);
+			Save(os, traits, outerGroup);
 			Assert.That(os.Count<SB.Identity>(), Is.EqualTo(1));
 			Assert.That(os.Count<SB.User>(), Is.EqualTo(1));
 			Assert.That(os.Count<SB.Group>(), Is.EqualTo(2));
@@ -309,7 +312,7 @@ public class ObjectSpaceIntegrationTests {
 			var group = os.New<SB.Group>();
 			group.Name = "empty-group";
 			group.Members = Array.Empty<SB.Identity>();
-			os.Save(group);
+			Save(os, traits, group);
 			var fetched = os.Get((SB.Group x) => x.Name, "empty-group");
 			Assert.That(fetched.Members, Is.Not.Null);
 			Assert.That(fetched.Members.Length, Is.EqualTo(0));
@@ -338,13 +341,13 @@ public class ObjectSpaceIntegrationTests {
 			var owner = os.New<SB.User>();
 			owner.Name = "owner1";
 			owner.Email = "owner@example.com";
-			os.Save(owner);
+			Save(os, traits, owner);
 			var acc = os.New<SB.Account>();
 			acc.AccountNumber = 1000;
 			acc.Name = "Savings";
 			acc.Balance = 100.50m;
 			acc.Owner = owner;
-			os.Save(acc);
+			Save(os, traits, acc);
 			Assert.That(os.Count<SB.Account>(), Is.EqualTo(1));
 			Validate(os);
 			os.Flush();
@@ -365,13 +368,13 @@ public class ObjectSpaceIntegrationTests {
 			var owner = os.New<SB.Identity>();
 			owner.Name = "owner2";
 			owner.PublicKey = new byte[] { 0x01 };
-			os.Save(owner);
+			Save(os, traits, owner);
 			var acc = os.New<SB.Account>();
 			acc.AccountNumber = 2000;
 			acc.Name = "Checking";
 			acc.Balance = 50m;
 			acc.Owner = owner;
-			os.Save(acc);
+			Save(os, traits, acc);
 			var fetched = os.Get((SB.Account x) => x.AccountNumber, 2000L);
 			Assert.That(fetched, Is.SameAs(acc));
 			Assert.That(fetched.Owner, Is.SameAs(owner));
@@ -396,15 +399,15 @@ public class ObjectSpaceIntegrationTests {
 			var owner = os.New<SB.Identity>();
 			owner.Name = "owner3";
 			owner.PublicKey = new byte[] { 0x02 };
-			os.Save(owner);
+			Save(os, traits, owner);
 			var acc = os.New<SB.Account>();
 			acc.AccountNumber = 3000;
 			acc.Name = "Joint";
 			acc.Balance = 200m;
 			acc.Owner = owner;
-			os.Save(acc);
+			Save(os, traits, acc);
 			acc.Balance = 999m;
-			os.Save(acc);
+			Save(os, traits, acc);
 			Validate(os);
 			os.Flush();
 			objectSpaceBytes = os.Streams.RootStream.ToArray();
@@ -425,13 +428,13 @@ public class ObjectSpaceIntegrationTests {
 			var owner = os.New<SB.Identity>();
 			owner.Name = "owner4";
 			owner.PublicKey = new byte[] { 0x03 };
-			os.Save(owner);
+			Save(os, traits, owner);
 			var acc = os.New<SB.Account>();
 			acc.AccountNumber = 4000;
 			acc.Name = "ToDelete";
 			acc.Balance = 0m;
 			acc.Owner = owner;
-			os.Save(acc);
+			Save(os, traits, acc);
 			Assert.That(os.Count<SB.Account>(), Is.EqualTo(1));
 			os.Delete(acc);
 			Validate(os);
@@ -456,18 +459,18 @@ public class ObjectSpaceIntegrationTests {
 			var user = os.New<SB.User>();
 			user.Name = "perm-user";
 			user.Email = "perm@example.com";
-			os.Save(user);
+			Save(os, traits, user);
 			var acc = os.New<SB.Account>();
 			acc.AccountNumber = 5000;
 			acc.Name = "PermTarget";
 			acc.Balance = 0m;
 			acc.Owner = user;
-			os.Save(acc);
+			Save(os, traits, acc);
 			var perm = os.New<SB.Permission>();
 			perm.PermissionName = "send-permission";
 			perm.Description = "Can send funds";
 			perm.GrantedTo = user;
-			os.Save(perm);
+			Save(os, traits, perm);
 			Validate(os);
 			os.Flush();
 			objectSpaceBytes = os.Streams.RootStream.ToArray();
@@ -487,20 +490,20 @@ public class ObjectSpaceIntegrationTests {
 			var user = os.New<SB.User>();
 			user.Name = "perm-user2";
 			user.Email = "perm2@example.com";
-			os.Save(user);
+			Save(os, traits, user);
 			var acc = os.New<SB.Account>();
 			acc.AccountNumber = 6000;
 			acc.Name = "PermTarget2";
 			acc.Balance = 0m;
 			acc.Owner = user;
-			os.Save(acc);
+			Save(os, traits, acc);
 			var perm = os.New<SB.Permission>();
 			perm.PermissionName = "send-permission";
 			perm.Description = "Can send funds";
 			perm.PermissionName = "limited-perm";
-			os.Save(perm);
+			Save(os, traits, perm);
 			perm.GrantedTo = user;
-			os.Save(perm);
+			Save(os, traits, perm);
 			Validate(os);
 			os.Flush();
 			objectSpaceBytes = os.Streams.RootStream.ToArray();
@@ -523,31 +526,31 @@ public class ObjectSpaceIntegrationTests {
 			var sender = os.New<SB.Identity>();
 			sender.Name = "sender";
 			sender.PublicKey = new byte[] { 0x10 };
-			os.Save(sender);
+			Save(os, traits, sender);
 			var senderAcc = os.New<SB.Account>();
 			senderAcc.AccountNumber = 7000;
 			senderAcc.Name = "SenderAcc";
 			senderAcc.Balance = 500m;
 			senderAcc.Owner = sender;
-			os.Save(senderAcc);
+			Save(os, traits, senderAcc);
 			var receiverAcc = os.New<SB.Account>();
 			receiverAcc.AccountNumber = 7001;
 			receiverAcc.Name = "ReceiverAcc";
 			receiverAcc.Balance = 0m;
 			receiverAcc.Owner = sender;
-			os.Save(receiverAcc);
+			Save(os, traits, receiverAcc);
 			var tx = os.New<SB.Transaction>();
 			tx.Sender = senderAcc;
 			tx.Receiver = receiverAcc;
 			tx.Amount = 42m;
 			tx.TxHash = "tx-001";
-			os.Save(tx);
+			Save(os, traits, tx);
 			var block = os.New<SB.Block>();
 			block.Height = 1;
 			block.Timestamp = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 			block.PreviousBlockHash = System.Text.Encoding.UTF8.GetBytes("genesis");
 			block.Transactions = new[] { tx };
-			os.Save(block);
+			Save(os, traits, block);
 			Validate(os);
 			os.Flush();
 			objectSpaceBytes = os.Streams.RootStream.ToArray();
@@ -568,33 +571,33 @@ public class ObjectSpaceIntegrationTests {
 			var miner = os.New<SB.Identity>();
 			miner.Name = "miner1";
 			miner.PublicKey = new byte[] { 0x20 };
-			os.Save(miner);
+			Save(os, traits, miner);
 			var acc1 = os.New<SB.Account>();
 			acc1.AccountNumber = 8000;
 			acc1.Name = "Acc1";
 			acc1.Balance = 100m;
 			acc1.Owner = miner;
-			os.Save(acc1);
+			Save(os, traits, acc1);
 			var acc2 = os.New<SB.Account>();
 			acc2.AccountNumber = 8001;
 			acc2.Name = "Acc2";
 			acc2.Balance = 0m;
 			acc2.Owner = miner;
-			os.Save(acc2);
+			Save(os, traits, acc2);
 			var tx = os.New<SB.Transaction>();
 			tx.Sender = acc1;
 			tx.Receiver = acc2;
 			tx.Amount = 10m;
 			tx.TxHash = "tx-backref";
-			os.Save(tx);
+			Save(os, traits, tx);
 			var block = os.New<SB.Block>();
 			block.Height = 2;
 			block.Timestamp = new DateTime(2024, 6, 15, 12, 0, 0, DateTimeKind.Utc);
 			block.PreviousBlockHash = System.Text.Encoding.UTF8.GetBytes("hash1");
 			block.Transactions = new[] { tx };
-			os.Save(block);
+			Save(os, traits, block);
 			tx.OwnerBlock = block;
-			os.Save(tx);
+			Save(os, traits, tx);
 			Validate(os);
 			os.Flush();
 			objectSpaceBytes = os.Streams.RootStream.ToArray();
@@ -620,7 +623,7 @@ public class ObjectSpaceIntegrationTests {
 				var u = os.New<SB.User>();
 				u.Name = $"user-{i}";
 				u.Email = $"user{i}@graph.com";
-				os.Save(u);
+				Save(os, traits, u);
 				users.Add(u);
 			}
 			var accounts = new List<SB.Account>();
@@ -630,7 +633,7 @@ public class ObjectSpaceIntegrationTests {
 				a.Name = $"Acc-{i}";
 				a.Balance = (i + 1) * 100m;
 				a.Owner = users[i];
-				os.Save(a);
+				Save(os, traits, a);
 				accounts.Add(a);
 			}
 			var txList = new List<SB.Transaction>();
@@ -640,7 +643,7 @@ public class ObjectSpaceIntegrationTests {
 				tx.Receiver = accounts[(i + 1) % 3];
 				tx.Amount = 5m;
 				tx.TxHash = $"tx-{i}";
-				os.Save(tx);
+				Save(os, traits, tx);
 				txList.Add(tx);
 			}
 			var block = os.New<SB.Block>();
@@ -648,7 +651,7 @@ public class ObjectSpaceIntegrationTests {
 			block.Timestamp = DateTime.UtcNow;
 			block.PreviousBlockHash = System.Text.Encoding.UTF8.GetBytes("prevhash");
 			block.Transactions = txList.ToArray();
-			os.Save(block);
+			Save(os, traits, block);
 			Validate(os);
 			os.Flush();
 			objectSpaceBytes = os.Streams.RootStream.ToArray();
@@ -675,31 +678,31 @@ public class ObjectSpaceIntegrationTests {
 			var admin = os.New<SB.User>();
 			admin.Name = "admin";
 			admin.Email = "admin@hierarchy.com";
-			os.Save(admin);
+			Save(os, traits, admin);
 			var viewer = os.New<SB.User>();
 			viewer.Name = "viewer";
 			viewer.Email = "viewer@hierarchy.com";
-			os.Save(viewer);
+			Save(os, traits, viewer);
 			var group = os.New<SB.Group>();
 			group.Name = "staff";
 			group.Members = new SB.Identity[] { admin, viewer };
-			os.Save(group);
+			Save(os, traits, group);
 			var acc = os.New<SB.Account>();
 			acc.AccountNumber = 10000;
 			acc.Name = "SharedAccount";
 			acc.Balance = 1000m;
 			acc.Owner = admin;
-			os.Save(acc);
+			Save(os, traits, acc);
 			var adminPerm = os.New<SB.Permission>();
 			adminPerm.PermissionName = "admin-access";
 			adminPerm.Description = "Full admin access";
 			adminPerm.GrantedTo = admin;
-			os.Save(adminPerm);
+			Save(os, traits, adminPerm);
 			var viewerPerm = os.New<SB.Permission>();
 			viewerPerm.PermissionName = "viewer-access";
 			viewerPerm.Description = "Read-only access";
 			viewerPerm.GrantedTo = admin;
-			os.Save(viewerPerm);
+			Save(os, traits, viewerPerm);
 			Validate(os);
 			os.Flush();
 			objectSpaceBytes = os.Streams.RootStream.ToArray();
@@ -728,12 +731,12 @@ public class ObjectSpaceIntegrationTests {
 				var id = os.New<SB.Identity>();
 				id.Name = $"loop-{i}";
 				id.PublicKey = new byte[] { (byte)i };
-				os.Save(id);
+				Save(os, traits, id);
 				ids.Add(id);
 			}
 			Assert.That(os.Count<SB.Identity>(), Is.EqualTo(5));
 			ids[0].PublicKey = new byte[] { 0xFF, 0xFE };
-			os.Save(ids[0]);
+			Save(os, traits, ids[0]);
 			os.Delete(ids[4]);
 			ids.RemoveAt(4);
 			Validate(os);

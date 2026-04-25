@@ -165,8 +165,14 @@ public class ObjectSpace : SyncLoadableBase, ICriticalObject, IDisposable {
 	public bool TryGet<TItem, TMember>(Expression<Func<TItem, TMember>> memberExpression, TMember memberValue, out TItem item) {
 		using (EnterAccessScope()) {
 
+			
 			// Get underlying stream mapped collection
 			var dimension = GetDimension<TItem>();
+
+			// Check provisional (unpersisted) objects first via O(N) scan
+			var comparer = (IEqualityComparer<TMember>)Comparers.GetEqualityComparer(typeof(TMember));
+			if (_instanceTracker.TryFindProvisional(memberExpression, memberValue, comparer, out item))
+				return true;
 
 			// Get index for member
 			var index = dimension.Container.ObjectStream.GetUniqueIndexFor(memberExpression);
@@ -379,9 +385,8 @@ public class ObjectSpace : SyncLoadableBase, ICriticalObject, IDisposable {
 
 	protected long CountInternal(Type itemType) {
 		using (EnterAccessScope()) {
-			// Get underlying stream mapped collection
 			var dimension = GetDimension(itemType);
-			return dimension.Container.Count;
+			return dimension.Container.Count + _instanceTracker.GetProvisionalCount(itemType);
 		}
 	}
 

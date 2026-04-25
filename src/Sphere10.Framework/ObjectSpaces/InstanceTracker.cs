@@ -10,6 +10,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Linq.Expressions;
 
 namespace Sphere10.Framework.ObjectSpaces;
 
@@ -102,6 +103,36 @@ internal class InstanceTracker {
 
 	public IEnumerable<object> GetInstances(Type itemType) 
 		=> _objectsByType.TryGetValue(itemType, out var instances) ? instances.Values : Array.Empty<object>();
+
+	/// <summary>
+	/// Returns the number of provisional (unpersisted) instances of the given type.
+	/// </summary>
+	public int GetProvisionalCount(Type itemType)
+		=> _objectsByType.TryGetValue(itemType, out var instances)
+			? instances.Values.Count(o => _provisionalObjects.Contains(o))
+			: 0;
+
+	/// <summary>
+	/// O(N) scan through provisional (unpersisted) instances of <typeparamref name="TItem"/> looking
+	/// for one whose <paramref name="memberExpression"/> value equals <paramref name="memberValue"/>.
+	/// Returns true and sets <paramref name="item"/> on the first match, false otherwise.
+	/// </summary>
+	public bool TryFindProvisional<TItem, TMember>(Expression<Func<TItem, TMember>> memberExpression, TMember memberValue, IEqualityComparer<TMember> comparer, out TItem item) {
+		var getter = memberExpression.Compile();
+		if (_objectsByType.TryGetValue(typeof(TItem), out var instances)) {
+			foreach (var obj in instances.Values) {
+				if (!_provisionalObjects.Contains(obj))
+					continue;
+				var typed = (TItem)obj;
+				if (comparer.Equals(getter(typed), memberValue)) {
+					item = typed;
+					return true;
+				}
+			}
+		}
+		item = default;
+		return false;
+	}
 
 
 	/// <summary>

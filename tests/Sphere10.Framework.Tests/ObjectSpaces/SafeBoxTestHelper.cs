@@ -127,6 +127,14 @@ public static class SafeBoxTestHelper {
 		TestTraits.MemoryMapped | TestTraits.Merklized | TestTraits.PersistentIgnorant,
 	];
 
+	/// <summary>Test cases that exclude persistence-ignorant variants.</summary>
+	public static readonly IEnumerable<TestTraits> NonPersistentIgnorantTestCases = [
+		TestTraits.MemoryMapped,
+		TestTraits.MemoryMapped  | TestTraits.Merklized,
+		TestTraits.FileMapped,
+		TestTraits.FileMapped  | TestTraits.Merklized,
+	];
+
 	/// <summary>All supported test trait combinations.</summary>
 	public static readonly IEnumerable<TestTraits> AllTestCases = [
 		TestTraits.MemoryMapped,
