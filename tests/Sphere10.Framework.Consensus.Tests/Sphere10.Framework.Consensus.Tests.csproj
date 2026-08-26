@@ -1,0 +1,18 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+<PropertyGroup>
+<TargetFramework>net8.0</TargetFramework>
+<OutputType>Library</OutputType>
+<Nullable>enable</Nullable>
+</PropertyGroup>
+
+<ItemGroup>
+<PackageReference Include="NUnit" Version="5.0.0-beta.1" />
+<PackageReference Include="NUnit3TestAdapter" Version="6.2.0" />
+<PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.8.1" />
+</ItemGroup>
+
+<ItemGroup>
+<ProjectReference Include="..\..\src\Sphere10.Framework.Consensus\Sphere10.Framework.Consensus.csproj" />
+<ProjectReference Include="..\..\src\Sphere10.Framework\Sphere10.Framework.csproj" />
+</ItemGroup>
+</Project>

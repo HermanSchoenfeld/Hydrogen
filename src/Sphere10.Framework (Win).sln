@@ -1,4 +1,4 @@
-﻿
+
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 18
 VisualStudioVersion = 18.4.11620.152
@@ -104,6 +104,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sphere10.Framework.Windows.Forms.MySQL", "Sphere10.Framework.Windows.Forms.MySQL\Sphere10.Framework.Windows.Forms.MySQL.csproj", "{265D072D-A56F-42C9-BD57-1C4F739ECBD3}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sphere10.Framework.Windows.Forms.Oracle", "Sphere10.Framework.Windows.Forms.Oracle\Sphere10.Framework.Windows.Forms.Oracle.csproj", "{ADC1307D-27D7-42E1-B133-409C18E2248D}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Sphere10.Framework.Consensus.Tests", "..\tests\Sphere10.Framework.Consensus.Tests\Sphere10.Framework.Consensus.Tests.csproj", "{1B4C361A-A380-4ECE-97CF-E614EFF23608}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -619,6 +621,18 @@ Global
 		{ADC1307D-27D7-42E1-B133-409C18E2248D}.Release|x64.Build.0 = Release|Any CPU
 		{ADC1307D-27D7-42E1-B133-409C18E2248D}.Release|x86.ActiveCfg = Release|Any CPU
 		{ADC1307D-27D7-42E1-B133-409C18E2248D}.Release|x86.Build.0 = Release|Any CPU
+		{1B4C361A-A380-4ECE-97CF-E614EFF23608}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1B4C361A-A380-4ECE-97CF-E614EFF23608}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1B4C361A-A380-4ECE-97CF-E614EFF23608}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{1B4C361A-A380-4ECE-97CF-E614EFF23608}.Debug|x64.Build.0 = Debug|Any CPU
+		{1B4C361A-A380-4ECE-97CF-E614EFF23608}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{1B4C361A-A380-4ECE-97CF-E614EFF23608}.Debug|x86.Build.0 = Debug|Any CPU
+		{1B4C361A-A380-4ECE-97CF-E614EFF23608}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1B4C361A-A380-4ECE-97CF-E614EFF23608}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1B4C361A-A380-4ECE-97CF-E614EFF23608}.Release|x64.ActiveCfg = Release|Any CPU
+		{1B4C361A-A380-4ECE-97CF-E614EFF23608}.Release|x64.Build.0 = Release|Any CPU
+		{1B4C361A-A380-4ECE-97CF-E614EFF23608}.Release|x86.ActiveCfg = Release|Any CPU
+		{1B4C361A-A380-4ECE-97CF-E614EFF23608}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -637,6 +651,7 @@ Global
 		{B6F7E3E8-5BE3-4BA5-B4F4-444F367EDB9D} = {5BA10B8B-3C32-4EE2-9C5F-AA2DD0D8BD6A}
 		{9A1EF7C9-A988-0039-A0DB-D84F5F25BD0D} = {E7705E7B-D04B-488C-8442-149A029F34B8}
 		{E5D80C09-4C9D-4F1D-9D94-D2C84C483950} = {9EA2842C-7248-4410-B9DB-16E3E32E2026}
+		{1B4C361A-A380-4ECE-97CF-E614EFF23608} = {E7705E7B-D04B-488C-8442-149A029F34B8}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {A6BF0BD3-FB17-4EDB-AFBF-08A34BD2E2B6}
