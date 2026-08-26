@@ -6,40 +6,49 @@
 //
 // This notice must not be removed when duplicating this file or its contents, in whole or in part.
 
-//using System;
-//using System.Collections.Generic;
-//using System.Numerics;
-//using System.Text;
-//using Sphere10.Framework;
+using System;
+using Sphere10.Framework;
 
-//namespace Sphere10.Framework.Consensus {
-//    public static class CryptoTool {
+namespace Sphere10.Framework.Consensus;
 
-//        /// <summary>
-//        /// Derives a checksum for a secret without revealing any information about that secret.
-//        /// </summary>
-//        /// <param name="secret">secret to checksum</param>
-//        /// <returns>A 32 bit checksum (secure)</returns>
-//        public static uint DeriveSecureChecksum(byte[] secret) {
-//            // Checksum's are public and used for fast lookups of secret, yet do not reveal any
-//            // information about secret.
-//            // Checksum = CastToUInt32( Last4BytesLE( SHA2-256( SHA2-256( secret || secret ) ) )
-//            return
-//                EndianBitConverter.Little.ToUInt32(
-//                    Hashers.SHA2_256D(Tools.Array.Concat(secret, secret)),
-//                    32 - 4 - 1
-//                );
-//        }
+public static class CryptoTool {
 
-//        public static byte[] DeriveChildDigest(byte[] digest, ulong index) {
-//            // DerivedKey_i = H(H(i || seed))
-//            // Knowing the set DerivedKey_0..DerivedKey_i reveals no info about seed, double hashing prevents
-//            // length extension attacks.
-//            return Hashers.SHA2_256D(Tools.Array.Concat(EndianBitConverter.Little.GetBytes((ulong)index), digest));
-//        }
+	/// <summary>
+	/// Derives a checksum for a secret without revealing any information about that secret.
+	/// </summary>
+	/// <param name="secret">Secret to checksum.</param>
+	/// <returns>A 32-bit checksum (secure).</returns>
+	public static uint DeriveSecureChecksum(byte[] secret) {
+		Guard.ArgumentNotNull(secret, nameof(secret));
 
-//    }
-//}
+		// Checksum's are public and used for fast lookups of secret, yet do not reveal any
+		// information about secret.
+		// Checksum = CastToUInt32( Last4BytesLE( SHA2-256( SHA2-256( secret || secret ) ) ) )
+		var concatenated = Tools.Array.Concat(secret, secret);
+		var firstHash = Hashers.Hash(CHF.SHA2_256, concatenated);
+		var secondHash = Hashers.Hash(CHF.SHA2_256, firstHash);
+		return EndianBitConverter.Little.ToUInt32(secondHash, 32 - 4 - 1);
+	}
+
+	/// <summary>
+	/// Derives a child digest from a parent digest and an index.
+	/// </summary>
+	/// <param name="digest">Parent digest.</param>
+	/// <param name="index">Child index.</param>
+	/// <returns>A derived child digest.</returns>
+	public static byte[] DeriveChildDigest(byte[] digest, ulong index) {
+		Guard.ArgumentNotNull(digest, nameof(digest));
+
+		// DerivedKey_i = H(H(i || seed))
+		// Knowing the set DerivedKey_0..DerivedKey_i reveals no info about seed, double hashing prevents
+		// length extension attacks.
+		var indexBytes = EndianBitConverter.Little.GetBytes(index);
+		var concatenated = Tools.Array.Concat(indexBytes, digest);
+		var firstHash = Hashers.Hash(CHF.SHA2_256, concatenated);
+		return Hashers.Hash(CHF.SHA2_256, firstHash);
+	}
+}
+
 
 
 

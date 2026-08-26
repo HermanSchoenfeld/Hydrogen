@@ -66,8 +66,7 @@ public class MolinaTargetAlgorithm : ICompactTargetAlgorithm {
 	}
 
 	public uint FromDigest(ReadOnlySpan<byte> digest) {
-		if (digest.Length > 32)
-			throw new ArgumentOutOfRangeException(nameof(digest), "Must be 32 bytes");
+		Guard.ArgumentLTE(digest.Length, 32, nameof(digest), "Must be 32 bytes");
 
 		// Add 0-padding to target on the right until it's 32bytes
 		var raw = new byte[32];
