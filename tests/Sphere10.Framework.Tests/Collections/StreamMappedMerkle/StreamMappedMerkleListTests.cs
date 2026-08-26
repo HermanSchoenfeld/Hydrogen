@@ -75,7 +75,7 @@ public class StreamMappedMerkleListTests : MerkleListTestsBase {
 
 		var digestLen = Hashers.GetDigestSizeBytes(chf);
 		using var _  = clusteredList.ObjectStream.Streams.EnterAccessScope();
-		var smRoot = clusteredList.ObjectStream.Streams.Header.MapExtensionProperty(0, digestLen, new ConstantSizeByteArraySerializer(digestLen)).Value;
+		var smRoot = clusteredList.ObjectStream.Streams.Header.MapExtensionProperty(0, digestLen, new ConstantSizeNullableByteArraySerializer(digestLen)).Value;
 
 		Assert.That(smRoot, Is.EqualTo(root).Using(ByteArrayEqualityComparer.Instance));
 		
