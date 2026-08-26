@@ -152,6 +152,53 @@ Where:
 - Block found too slowly → difficulty decreases (lower compact target)
 - Exponential smoothing prevents oscillation
 
+## 🔗 Blockchain Primitives
+
+The library also provides generic state-transition and chain-management primitives for building full blockchains.
+
+### State Transition
+
+```csharp
+using Sphere10.Framework.Consensus;
+
+// Define your ledger state
+public class MyState : BlockchainStateBase {
+    // implement your ledger data
+}
+
+// Define invertible operations
+public class MyOperation : BlockchainOperationBase<MyState> {
+    protected override void ApplyInternal(MyState state) { /* mutate */ }
+    protected override void UndoInternal(MyState state) { /* reverse */ }
+}
+
+// Define blocks
+public class MyBlock : BlockchainBlock<MyState> {
+    public MyBlock(IEnumerable<IBlockchainOperation<MyState>> ops) : base(ops) { }
+}
+```
+
+### Chain Management
+
+```csharp
+using Sphere10.Framework.Consensus;
+
+var state = new MyState();
+var chain = new InMemoryBlockchain<MyBlock, MyState>(state);
+
+// Apply blocks
+chain.ApplyBlock(block1);
+chain.ApplyBlock(block2);
+
+// Undo last block
+chain.UndoBlock();
+
+// Branching frontier
+var unfinalized = new FinalizedBlockchain<MyBlock, MyState>(chain);
+var head = unfinalized.AddUnfinalizedRoot(candidateBlock, candidateState);
+unfinalized.FinalizePath(head);
+```
+
 ## 📁 Project Contents
 
 | File | Description |
@@ -163,6 +210,17 @@ Where:
 | `ASERT2.cs` | ASERT with block-to-block time |
 | `ASERTConfiguration.cs` | ASERT configuration (block time, relaxation) |
 | `HashStats.cs` | Periodic statistics tracking |
+| `Blockchain\IBlockchainState.cs` | State interface |
+| `Blockchain\IBlockchainOperation.cs` | Operation interface |
+| `Blockchain\IBlockchainBlock.cs` | Block interface |
+| `Blockchain\BlockchainBlock.cs` | Block base implementation |
+| `Blockchain\BlockchainOperationBase.cs` | Operation base implementation |
+| `Blockchain\BlockchainStateBase.cs` | State base implementation |
+| `Blockchain\Blockchain.cs` | Linear finalized chain with Apply/Undo |
+| `Blockchain\UnfinalizedBlockGraph.cs` | Branching unfinalized frontier |
+| `Blockchain\FinalizedBlockchain.cs` | Two-sector chain with re-org support |
+| `CryptoTool.cs` | Secure checksum and hierarchical digest derivation |
+| `Blockchain\MerkleHelper.cs` | Merkle root computation for blocks/operations |
 
 ## ✅ Best Practices
 
