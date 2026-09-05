@@ -14,19 +14,20 @@ namespace Sphere10.Framework.Consensus;
 
 /// <summary>
 /// A concrete linear blockchain backed by an in-memory list of linked blocks.
+/// This is the wrapperable core that <see cref="BlockchainDecorator{TBlock, TState, TBlockID, TWeight, TOperationID, TConcrete}"/> wraps.
 /// </summary>
-public class InMemoryBlockchain<TBlock, TState, TBlockID, TWeight, TOperationID> : BlockchainBase<TBlock, TState, TBlockID, TWeight, TOperationID>
+public class Blockchain<TBlock, TState, TBlockID, TWeight, TOperationID> : BlockchainBase<TBlock, TState, TBlockID, TWeight, TOperationID>
 	where TBlock : IBlockchainBlock<TState, TBlockID, TWeight, TOperationID>
 	where TState : IBlockchainState {
 
 	private readonly List<LinkedBlock<TBlock, TState, TBlockID, TWeight, TOperationID>> _blocks;
 	private readonly IWeightAggregator<TWeight> _weightAggregator;
 
-	public InMemoryBlockchain(TState state, IWeightAggregator<TWeight> weightAggregator)
+	public Blockchain(TState state, IWeightAggregator<TWeight> weightAggregator)
 		: this(state, weightAggregator, Array.Empty<TBlock>()) {
 	}
 
-	public InMemoryBlockchain(TState state, IWeightAggregator<TWeight> weightAggregator, IEnumerable<TBlock> blocks) {
+	public Blockchain(TState state, IWeightAggregator<TWeight> weightAggregator, IEnumerable<TBlock> blocks) {
 		State = state ?? throw new ArgumentNullException(nameof(state));
 		_weightAggregator = weightAggregator ?? throw new ArgumentNullException(nameof(weightAggregator));
 		_blocks = new List<LinkedBlock<TBlock, TState, TBlockID, TWeight, TOperationID>>();

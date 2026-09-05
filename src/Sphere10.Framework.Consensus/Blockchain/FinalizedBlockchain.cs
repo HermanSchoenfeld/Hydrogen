@@ -18,19 +18,20 @@ namespace Sphere10.Framework.Consensus;
 /// finalization. Maintains an <see cref="UnfinalizedBlockGraph{TBlock, TState, TBlockID, TWeight, TOperationID}"/>
 /// whose root is always synced to the finalized head.
 /// </summary>
-public class FinalizedBlockchain<TBlock, TState, TBlockID, TWeight, TOperationID> : BlockchainDecorator<TBlock, TState, TBlockID, TWeight, TOperationID, InMemoryBlockchain<TBlock, TState, TBlockID, TWeight, TOperationID>>
+public class FinalizedBlockchain<TBlock, TState, TBlockID, TWeight, TOperationID> : BlockchainDecorator<TBlock, TState, TBlockID, TWeight, TOperationID, Blockchain<TBlock, TState, TBlockID, TWeight, TOperationID>>
 	where TBlock : IBlockchainBlock<TState, TBlockID, TWeight, TOperationID>
 	where TState : IBlockchainState {
 
 	private readonly UnfinalizedBlockGraph<TBlock, TState, TBlockID, TWeight, TOperationID> _unfinalizedSector;
 
-	public FinalizedBlockchain(InMemoryBlockchain<TBlock, TState, TBlockID, TWeight, TOperationID> blockchain)
+	public FinalizedBlockchain(Blockchain<TBlock, TState, TBlockID, TWeight, TOperationID> blockchain)
 		: this(blockchain, new UnfinalizedBlockGraph<TBlock, TState, TBlockID, TWeight, TOperationID>(blockchain.WeightAggregator)) {
 	}
 
-	public FinalizedBlockchain(InMemoryBlockchain<TBlock, TState, TBlockID, TWeight, TOperationID> blockchain, UnfinalizedBlockGraph<TBlock, TState, TBlockID, TWeight, TOperationID> unfinalizedSector)
+	public FinalizedBlockchain(Blockchain<TBlock, TState, TBlockID, TWeight, TOperationID> blockchain, UnfinalizedBlockGraph<TBlock, TState, TBlockID, TWeight, TOperationID> unfinalizedSector)
 		: base(blockchain) {
-		_unfinalizedSector = unfinalizedSector ?? throw new ArgumentNullException(nameof(unfinalizedSector));
+		Guard.ArgumentNotNull(unfinalizedSector, nameof(unfinalizedSector));
+		_unfinalizedSector = unfinalizedSector;
 	}
 
 	public UnfinalizedBlockGraph<TBlock, TState, TBlockID, TWeight, TOperationID> UnfinalizedSector => _unfinalizedSector;

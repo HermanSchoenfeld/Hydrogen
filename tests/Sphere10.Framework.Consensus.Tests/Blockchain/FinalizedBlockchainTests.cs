@@ -20,7 +20,7 @@ public class FinalizedBlockchainTests {
 	[Test]
 	public void FinalizePath_AdvancesFinalizedSector() {
 		var state = new AccountState();
-		var chain = new InMemoryBlockchain<AccountBlock, AccountState, int, long, int>(state, new LongWeightAggregator());
+		var chain = new Blockchain<AccountBlock, AccountState, int, long, int>(state, new LongWeightAggregator());
 		var manager = new FinalizedBlockchain<AccountBlock, AccountState, int, long, int>(chain);
 
 		var block1 = new AccountBlock(new AccountOperation("alice", 100));
@@ -39,7 +39,7 @@ public class FinalizedBlockchainTests {
 	[Test]
 	public void CreateReorgPlan_IdentifiesCorrectPaths() {
 		var state = new AccountState();
-		var chain = new InMemoryBlockchain<AccountBlock, AccountState, int, long, int>(state, new LongWeightAggregator());
+		var chain = new Blockchain<AccountBlock, AccountState, int, long, int>(state, new LongWeightAggregator());
 		var manager = new FinalizedBlockchain<AccountBlock, AccountState, int, long, int>(chain);
 
 		var root = manager.AddUnfinalizedRoot(new AccountBlock(new AccountOperation("alice", 100)));
@@ -58,7 +58,7 @@ public class FinalizedBlockchainTests {
 	[Test]
 	public void ExecuteReorg_SwitchesBranch() {
 		var state = new AccountState();
-		var chain = new InMemoryBlockchain<AccountBlock, AccountState, int, long, int>(state, new LongWeightAggregator());
+		var chain = new Blockchain<AccountBlock, AccountState, int, long, int>(state, new LongWeightAggregator());
 		var manager = new FinalizedBlockchain<AccountBlock, AccountState, int, long, int>(chain);
 
 		// Build two competing branches from a common root
@@ -79,7 +79,7 @@ public class FinalizedBlockchainTests {
 	[Test]
 	public void FinalizePath_SyncsUnfinalizedRootToHead() {
 		var state = new AccountState();
-		var chain = new InMemoryBlockchain<AccountBlock, AccountState, int, long, int>(state, new LongWeightAggregator());
+		var chain = new Blockchain<AccountBlock, AccountState, int, long, int>(state, new LongWeightAggregator());
 		var manager = new FinalizedBlockchain<AccountBlock, AccountState, int, long, int>(chain);
 
 		var block1 = new AccountBlock(new AccountOperation("alice", 100));
@@ -100,7 +100,7 @@ public class FinalizedBlockchainTests {
 	[Test]
 	public void ExecuteReorg_SyncsUnfinalizedRootToHead() {
 		var state = new AccountState();
-		var chain = new InMemoryBlockchain<AccountBlock, AccountState, int, long, int>(state, new LongWeightAggregator());
+		var chain = new Blockchain<AccountBlock, AccountState, int, long, int>(state, new LongWeightAggregator());
 		var manager = new FinalizedBlockchain<AccountBlock, AccountState, int, long, int>(chain);
 
 		// Build two competing branches
@@ -131,7 +131,7 @@ public class FinalizedBlockchainTests {
 	[Test]
 	public void Decorator_DelegatesToInternalBlockchain() {
 		var state = new AccountState();
-		var chain = new InMemoryBlockchain<AccountBlock, AccountState, int, long, int>(state, new LongWeightAggregator());
+		var chain = new Blockchain<AccountBlock, AccountState, int, long, int>(state, new LongWeightAggregator());
 		var manager = new FinalizedBlockchain<AccountBlock, AccountState, int, long, int>(chain);
 
 		var block = new AccountBlock(new AccountOperation("alice", 100));

@@ -312,7 +312,7 @@ To build a new chain on top of this library:
 ## 8. Planned Work
 
 - [x] Flesh out `IBlockchainState`, `Operation<TState>`, and `Block<TState>` as concrete interfaces/base classes in code.
-- [x] Implement `InMemoryBlockchain<TBlock, TState>` with full Apply/Undo stack.
+- [x] Implement `Blockchain<TBlock, TState>` (concrete linear chain) with full Apply/Undo stack.
 - [x] Implement `UnfinalizedBlockGraph<TBlock, TState>` with tree-based potential-head tracking.
 - [x] Implement `FinalizedBlockchain` with re-org support.
 - [x] Re-enable and complete `CryptoTool` helpers.

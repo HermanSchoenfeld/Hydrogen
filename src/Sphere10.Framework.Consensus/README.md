@@ -184,7 +184,7 @@ public class MyBlock : BlockchainBlock<MyState> {
 using Sphere10.Framework.Consensus;
 
 var state = new MyState();
-var chain = new InMemoryBlockchain<MyBlock, MyState>(state);
+var chain = new Blockchain<MyBlock, MyState>(state);
 
 // Apply blocks
 chain.ApplyBlock(block1);

@@ -19,7 +19,7 @@ public class BlockchainTests {
 	[Test]
 	public void Blockchain_ApplyBlock_AdvancesHeightAndState() {
 		var state = new AccountState();
-		var chain = new InMemoryBlockchain<AccountBlock, AccountState, int, long, int>(state, new LongWeightAggregator());
+		var chain = new Blockchain<AccountBlock, AccountState, int, long, int>(state, new LongWeightAggregator());
 
 		var block1 = new AccountBlock(new AccountOperation("alice", 100));
 		var block2 = new AccountBlock(new AccountOperation("alice", 50));
@@ -36,7 +36,7 @@ public class BlockchainTests {
 	[Test]
 	public void Blockchain_UndoBlock_RevertsStateAndHeight() {
 		var state = new AccountState();
-		var chain = new InMemoryBlockchain<AccountBlock, AccountState, int, long, int>(state, new LongWeightAggregator());
+		var chain = new Blockchain<AccountBlock, AccountState, int, long, int>(state, new LongWeightAggregator());
 
 		chain.ApplyBlock(new AccountBlock(new AccountOperation("alice", 100)));
 		chain.ApplyBlock(new AccountBlock(new AccountOperation("alice", 50)));
@@ -51,7 +51,7 @@ public class BlockchainTests {
 	[Test]
 	public void Blockchain_UndoBlock_OnEmptyChain_Throws() {
 		var state = new AccountState();
-		var chain = new InMemoryBlockchain<AccountBlock, AccountState, int, long, int>(state, new LongWeightAggregator());
+		var chain = new Blockchain<AccountBlock, AccountState, int, long, int>(state, new LongWeightAggregator());
 
 		Assert.That(() => chain.UndoBlock(), Throws.InvalidOperationException);
 	}
@@ -59,7 +59,7 @@ public class BlockchainTests {
 	[Test]
 	public void Blockchain_BlockAppliedEvent_FiresOnApply() {
 		var state = new AccountState();
-		var chain = new InMemoryBlockchain<AccountBlock, AccountState, int, long, int>(state, new LongWeightAggregator());
+		var chain = new Blockchain<AccountBlock, AccountState, int, long, int>(state, new LongWeightAggregator());
 		LinkedBlock<AccountBlock, AccountState, int, long, int>? appliedBlock = null;
 		chain.BlockApplied += block => appliedBlock = block;
 
@@ -73,7 +73,7 @@ public class BlockchainTests {
 	[Test]
 	public void Blockchain_BlockUndoneEvent_FiresOnUndo() {
 		var state = new AccountState();
-		var chain = new InMemoryBlockchain<AccountBlock, AccountState, int, long, int>(state, new LongWeightAggregator());
+		var chain = new Blockchain<AccountBlock, AccountState, int, long, int>(state, new LongWeightAggregator());
 		LinkedBlock<AccountBlock, AccountState, int, long, int>? undoneBlock = null;
 		chain.BlockUndone += block => undoneBlock = block;
 
@@ -93,7 +93,7 @@ public class BlockchainTests {
 			new AccountBlock(new AccountOperation("alice", 50))
 		};
 
-		var chain = new InMemoryBlockchain<AccountBlock, AccountState, int, long, int>(state, new LongWeightAggregator(), blocks);
+		var chain = new Blockchain<AccountBlock, AccountState, int, long, int>(state, new LongWeightAggregator(), blocks);
 
 		Assert.That(chain.Height, Is.EqualTo(2L));
 		Assert.That(state.GetBalance("alice"), Is.EqualTo(150L));
