@@ -7,6 +7,7 @@
 // This notice must not be removed when duplicating this file or its contents, in whole or in part.
 
 using System;
+using System.Threading.Tasks;
 
 namespace Sphere10.Framework.Application;
 
@@ -20,25 +21,26 @@ public class ConsoleApplicationUserInterfaceServices : IUserInterfaceServices {
 
 	public string Status { get; set; } = string.Empty;
 
-	public void ShowNagScreen(string nagMessage) {
+	public Task ShowNagScreen(string nagMessage) {
 		Console.WriteLine(nagMessage);
+		return Task.CompletedTask;
 	}
 
 	public object PrimaryUIController { get; } = new object();
 
-	public void ShowSendCommentDialog() {
+	public Task ShowSendCommentDialog() {
 		throw new NotSupportedException();
 	}
 
-	public void ShowSubmitBugReportDialog() {
+	public Task ShowSubmitBugReportDialog() {
 		throw new NotSupportedException();
 	}
 
-	public void ShowRequestFeatureDialog() {
+	public Task ShowRequestFeatureDialog() {
 		throw new NotSupportedException();
 	}
 
-	public void ShowAboutBox() {
+	public Task ShowAboutBox() {
 		throw new NotSupportedException();
 	}
 

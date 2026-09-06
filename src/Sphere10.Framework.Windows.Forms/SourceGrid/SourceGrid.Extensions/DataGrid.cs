@@ -8,6 +8,7 @@
 
 using Sphere10.Framework.Windows.Forms.SourceGrid.Selection;
 using System;
+using System.Threading.Tasks;
 using System.ComponentModel;
 using Sphere10.Framework.Windows.Forms.SourceGrid.ComponentModel;
 using Sphere10.Framework.Windows.Forms;
@@ -252,7 +253,7 @@ public class DataGrid : GridVirtual {
 		}
 	}
 
-	protected override void OnKeyDown(System.Windows.Forms.KeyEventArgs e) {
+	protected override async void OnKeyDown(System.Windows.Forms.KeyEventArgs e) {
 		base.OnKeyDown(e);
 
 		if (e.KeyCode == System.Windows.Forms.Keys.Delete &&
@@ -260,11 +261,15 @@ public class DataGrid : GridVirtual {
 		    mBoundList.AllowDelete &&
 		    e.Handled == false &&
 		    mDeleteRowsWithDeleteKey) {
-			object[] rows = SelectedDataRows;
-			if (rows != null && rows.Length > 0)
-				DeleteSelectedRows();
-
 			e.Handled = true;
+			object[] rows = SelectedDataRows;
+			if (rows != null && rows.Length > 0) {
+				try {
+					await DeleteSelectedRowsAsync();
+				} catch (Exception Error) {
+					OnUserException(new ExceptionEventArgs(Error));
+				}
+			}
 		} else if (e.KeyCode == System.Windows.Forms.Keys.Escape &&
 		           e.Handled == false &&
 		           mCancelEditingWithEscapeKey) {
@@ -323,7 +328,7 @@ public class DataGrid : GridVirtual {
 	private string mDeleteQuestionMessage = "Are you sure to delete all the selected rows?";
 
 	/// <summary>
-	/// Message showed with the DeleteSelectedRows method. Set to null to not show any message.
+	/// Message showed with the DeleteSelectedRowsAsync method. Set to null to not show any message.
 	/// </summary>
 	public string DeleteQuestionMessage {
 		get { return mDeleteQuestionMessage; }
@@ -334,9 +339,9 @@ public class DataGrid : GridVirtual {
 	/// Delete all the selected rows.
 	/// </summary>
 	/// <returns>Returns true if one or more row is deleted otherwise false.</returns>
-	public virtual bool DeleteSelectedRows() {
+	public virtual async Task<bool> DeleteSelectedRowsAsync() {
 		if (string.IsNullOrEmpty(mDeleteQuestionMessage) ||
-		    DialogEx.Show(this, SystemIconType.Question, mDeleteQuestionMessage, System.Windows.Forms.Application.ProductName, System.Windows.Forms.MessageBoxButtons.YesNo, System.Windows.Forms.MessageBoxIcon.Question) ==
+		    await DialogEx.ShowAsync(this, SystemIconType.Question, mDeleteQuestionMessage, System.Windows.Forms.Application.ProductName, System.Windows.Forms.MessageBoxButtons.YesNo, System.Windows.Forms.MessageBoxIcon.Question) ==
 		    System.Windows.Forms.DialogResult.Yes) {
 			foreach (int gridRow in Selection.GetSelectionRegion().GetRowsIndex()) {
 				int dataIndex = Rows.IndexToDataSourceIndex(gridRow);

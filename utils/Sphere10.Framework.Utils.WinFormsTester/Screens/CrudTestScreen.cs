@@ -251,8 +251,8 @@ public partial class CrudTestScreen : ApplicationScreen {
 		_dataSource.GenerateUpdateError = _generateUpdateErrorCheckBox.Checked;
 	}
 
-	private void _crudDialogButton_Click(object sender, EventArgs e) {
-		CrudDialog.Show(this, "Employees", _gridBindings, _flagsCheckedListBox.SelectedEnum != null ? (DataSourceCapabilities)_flagsCheckedListBox.SelectedEnum : DataSourceCapabilities.Default, _dataSource);
+	private async void _crudDialogButton_Click(object sender, EventArgs e) {
+		await CrudDialog.ShowAsync(this, "Employees", _gridBindings, _flagsCheckedListBox.SelectedEnum != null ? (DataSourceCapabilities)_flagsCheckedListBox.SelectedEnum : DataSourceCapabilities.Default, _dataSource);
 	}
 
 	private void _crudComboBox_EntitySelectionChanged(CrudComboBox arg1, object arg2) {
@@ -276,9 +276,9 @@ public partial class CrudTestScreen : ApplicationScreen {
 		_crudGrid.RefreshGrid();
 	}
 
-	private void _autoSizeCheckBox_CheckedChanged(object sender, EventArgs e) {
+	private async void _autoSizeCheckBox_CheckedChanged(object sender, EventArgs e) {
 		_crudGrid.AutoPageSize = _autoSizeCheckBox.Checked;
-		_crudComboBox.SetCrudParameters(_gridBindings, null, (DataSourceCapabilities)_flagsCheckedListBox.SelectedEnum, _dataSource, autoPageSize: _autoSizeCheckBox.Checked);
+		await _crudComboBox.SetCrudParameters(_gridBindings, null, (DataSourceCapabilities)_flagsCheckedListBox.SelectedEnum, _dataSource, autoPageSize: _autoSizeCheckBox.Checked);
 	}
 
 	private void _autoSelectOnCreateCheckBox_CheckedChanged_1(object sender, EventArgs e) {

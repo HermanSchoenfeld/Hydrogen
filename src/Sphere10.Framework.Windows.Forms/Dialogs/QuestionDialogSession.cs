@@ -7,6 +7,7 @@
 // This notice must not be removed when duplicating this file or its contents, in whole or in part.
 
 using System;
+using System.Threading.Tasks;
 using System.Collections.Generic;
 
 namespace Sphere10.Framework.Windows.Forms;
@@ -18,12 +19,12 @@ public class QuestionDialogSession {
 		_autoAnswers = new Dictionary<Guid, DialogExResult>();
 	}
 
-	public DialogExResult AskQuestion(Guid questionID, SystemIconType iconType, string title, string text, params string[] buttonNames) {
+	public async Task<DialogExResult> AskQuestionAsync(Guid questionID, SystemIconType iconType, string title, string text, params string[] buttonNames) {
 		if (_autoAnswers.ContainsKey(questionID))
 			return _autoAnswers[questionID];
 
-		var dialog = new QuestionDialog(iconType, title, text, buttonNames);
-		dialog.ShowDialog();
+		using var dialog = new QuestionDialog(iconType, title, text, buttonNames);
+		await dialog.ShowDialogAsync();
 
 		if (dialog.AlwaysFlag)
 			_autoAnswers[questionID] = dialog.DialogResult;

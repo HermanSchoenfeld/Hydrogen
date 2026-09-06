@@ -1,4 +1,4 @@
-﻿// Copyright (c) Herman Schoenfeld 2018 - Present. All rights reserved. (https://sphere10.com)
+// Copyright (c) Herman Schoenfeld 2018 - Present. All rights reserved. (https://sphere10.com)
 // Author: Herman Schoenfeld
 //
 // Distributed under the MIT software license, see the accompanying file
@@ -34,7 +34,7 @@ public class TestBlock : ApplicationBlock {
 							.AddScreen(new CantGoBackScreen())
 							.AddScreen(new ConfirmScreen())
 							.OnFinished(async (model) => {
-								DialogEx.Show(BlockMainForm.ActiveForm,
+								await DialogEx.ShowAsync(BlockMainForm.ActiveForm,
 									SystemIconType.Information,
 									"Result",
 									$"Name: {model.Name}, Age: {model.Age}",
@@ -65,7 +65,7 @@ public class TestBlock : ApplicationBlock {
 				.WithImage32x32(Resources.Tests232x32)
 				.AddActionItem("Visual Inheritance Fixer", async () =>  {
 					var form = new VisualInheritanceFixerSubForm();
-					form.ShowDialog();
+					await form.ShowDialogAsync(BlockMainForm.ActiveForm);
 				},Resources.Generic16x16)
 				.AddScreenItem<HooksScreen>("Hooks", Resources.Generic16x16)
 				.AddScreenItem<TestSoundsScreen>("Test Sounds", Resources.Generic16x16)
@@ -130,7 +130,7 @@ public class TestBlock : ApplicationBlock {
 									.AddScreen(new CantGoBackScreen())
 									.AddScreen(new ConfirmScreen())
 									.OnFinished(async (model) => {
-										DialogEx.Show(BlockMainForm.ActiveForm,
+										await DialogEx.ShowAsync(BlockMainForm.ActiveForm,
 											SystemIconType.Information,
 											"Result",
 											$"Name: {model.Name}, Age: {model.Age}",

@@ -7,6 +7,7 @@
 // This notice must not be removed when duplicating this file or its contents, in whole or in part.
 
 using System;
+using System.Threading.Tasks;
 
 namespace Sphere10.Framework.Application;
 
@@ -18,8 +19,7 @@ internal class NoOpProductLicenseEnforcer : IProductLicenseEnforcer {
 
 	public bool ValidateLicenseCommand(ProductLicenseActivationDTO licenseActivation, SignedItem<ProductLicenseCommandDTO> command) => false;
 
-	public void EnforceLicense(bool suppressNag) {
-	}
+	public Task EnforceLicense(bool suppressNag) => Task.CompletedTask;
 
 	public ProductRights CalculateRights(out string nagMessage) {
 		nagMessage = null;

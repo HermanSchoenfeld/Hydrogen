@@ -297,19 +297,19 @@ public partial class TransactionalCollectionScreen : ApplicationScreen {
 		return disposables;
 	}
 
-	private void _clearButton_Click(object sender, EventArgs e) {
+	private async void _clearButton_Click(object sender, EventArgs e) {
 		try {
 			_outputTextBox.Clear();
 		} catch (Exception error) {
-			ExceptionDialog.Show(this, error);
+			await ExceptionDialog.ShowAsync(this, error);
 		}
 	}
 
-	private void _copyButton_Click(object sender, EventArgs e) {
+	private async void _copyButton_Click(object sender, EventArgs e) {
 		try {
 			Clipboard.SetText(_outputTextBox.Text);
 		} catch (Exception error) {
-			ExceptionDialog.Show(this, error);
+			await ExceptionDialog.ShowAsync(this, error);
 		}
 	}
 
@@ -317,7 +317,7 @@ public partial class TransactionalCollectionScreen : ApplicationScreen {
 		try {
 			await Task.Run(RunListAppendTest);
 		} catch (Exception error) {
-			ExceptionDialog.Show(error);
+			await ExceptionDialog.ShowAsync(error);
 		}
 	}
 
@@ -330,7 +330,7 @@ public partial class TransactionalCollectionScreen : ApplicationScreen {
 				(ClusteredStreamsPolicy)_policyBox.SelectedEnum
 			));
 		} catch (Exception error) {
-			ExceptionDialog.Show(error);
+			await ExceptionDialog.ShowAsync(error);
 		}
 	}
 
@@ -338,7 +338,7 @@ public partial class TransactionalCollectionScreen : ApplicationScreen {
 		try {
 			await Task.Run(RunDictAppendTest);
 		} catch (Exception error) {
-			ExceptionDialog.Show(error);
+			await ExceptionDialog.ShowAsync(error);
 		}
 	}
 
@@ -346,7 +346,7 @@ public partial class TransactionalCollectionScreen : ApplicationScreen {
 		try {
 			await Task.Run(RunBufferAppendTest);
 		} catch (Exception error) {
-			ExceptionDialog.Show(error);
+			await ExceptionDialog.ShowAsync(error);
 		}
 	}
 

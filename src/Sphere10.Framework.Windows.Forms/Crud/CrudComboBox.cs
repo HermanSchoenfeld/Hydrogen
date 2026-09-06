@@ -91,7 +91,7 @@ public class CrudComboBox : CustomComboBox {
 			_crudGrid.AutoPageSize = autoPageSize;
 			_crudGrid.AutoSizeCells();
 		} catch (Exception error) {
-			ExceptionDialog.Show(this, error);
+			await ExceptionDialog.ShowAsync(this, error);
 		}
 	}
 

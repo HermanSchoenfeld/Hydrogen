@@ -7,6 +7,7 @@
 // This notice must not be removed when duplicating this file or its contents, in whole or in part.
 
 using System;
+using System.Threading.Tasks;
 
 namespace Sphere10.Framework.Application;
 
@@ -18,17 +19,17 @@ public interface IUserInterfaceServices {
 
 	string Status { get; set; }
 
-	void ShowNagScreen(string nagMessage);
+	Task ShowNagScreen(string nagMessage);
 
 	object PrimaryUIController { get; }
 
-	void ShowSendCommentDialog();
+	Task ShowSendCommentDialog();
 
-	void ShowSubmitBugReportDialog();
+	Task ShowSubmitBugReportDialog();
 
-	void ShowRequestFeatureDialog();
+	Task ShowRequestFeatureDialog();
 
-	void ShowAboutBox();
+	Task ShowAboutBox();
 
 	void ReportError(Exception e);
 

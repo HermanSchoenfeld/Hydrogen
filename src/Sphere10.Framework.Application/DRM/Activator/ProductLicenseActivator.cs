@@ -42,7 +42,7 @@ public class ProductLicenseActivator : IProductLicenseActivator {
 
 		// All good, store this license
 		Storage.SaveActivatedLicense(licenseActivation);
-		ProductLicenseEnforcer.EnforceLicense(true);
+		await ProductLicenseEnforcer.EnforceLicense(true);
 	}
 
 }

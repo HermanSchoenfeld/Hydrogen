@@ -11,6 +11,7 @@ using System.ComponentModel;
 using System.Drawing;
 using System.Windows.Forms;
 using System.Threading;
+using System.Threading.Tasks;
 using Sphere10.Framework.Application;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -35,9 +36,9 @@ public partial class LiteMainForm : ApplicationForm, IMainForm {
 
 	#region Form Methods
 
-	protected virtual void OnFirstActivated() {
+	protected virtual async void OnFirstActivated() {
 		if (!Tools.Runtime.IsDesignMode)
-			EnforceLicense();
+			await EnforceLicense();
 	}
 
 	// Shown every time window becomes active window
@@ -52,7 +53,7 @@ public partial class LiteMainForm : ApplicationForm, IMainForm {
 	}
 
 
-	protected override async void OnLoad(EventArgs e) {
+	protected override void OnLoad(EventArgs e) {
 		base.OnLoad(e);
 		if (!Tools.Runtime.IsDesignMode) {
 
@@ -188,7 +189,7 @@ public partial class LiteMainForm : ApplicationForm, IMainForm {
 
 	public virtual string Status { get; set; }
 
-	public virtual async void ExecuteInUIFriendlyContext(Action function, bool executeAsync = false) {
+	public virtual void ExecuteInUIFriendlyContext(Action function, bool executeAsync = false) {
 		if (executeAsync) {
 			BeginInvoke(function);
 		} else {
@@ -196,16 +197,14 @@ public partial class LiteMainForm : ApplicationForm, IMainForm {
 		}
 	}
 
-	public virtual void ShowNagScreen(string nagMessage) {
-		ExecuteInUIFriendlyContext(() => {
+	public virtual Task ShowNagScreen(string nagMessage)
+		=> this.InvokeAsyncEx(async _ => {
 			var nagDialogInstance = Sphere10Framework.Instance.ServiceProvider.GetService<INagDialog>();
-			if (WindowState == FormWindowState.Minimized) {
+			if (WindowState == FormWindowState.Minimized)
 				nagDialogInstance.StartPosition = FormStartPosition.CenterScreen;
-			}
 			nagDialogInstance.NagMessage = nagMessage;
-			nagDialogInstance.ShowDialog(this);
+			await nagDialogInstance.ShowDialogAsync(this);
 		});
-	}
 
 
 	public virtual object PrimaryUIController {
@@ -216,28 +215,20 @@ public partial class LiteMainForm : ApplicationForm, IMainForm {
 
 	#region IUserNotificationServices Implementation
 
-	public virtual void ShowSendCommentDialog() {
-		var dialog = Sphere10Framework.Instance.ServiceProvider.GetService<IProductSendCommentsDialog>();
-		dialog.ShowDialog();
-	}
+	public virtual Task ShowSendCommentDialog()
+		=> this.InvokeAsyncEx(_ => Sphere10Framework.Instance.ServiceProvider.GetService<IProductSendCommentsDialog>().ShowDialogAsync(this));
 
-	public virtual void ShowSubmitBugReportDialog() {
-		var dialog = Sphere10Framework.Instance.ServiceProvider.GetService<IProductReportBugDialog>();
-		dialog.ShowDialog();
-	}
+	public virtual Task ShowSubmitBugReportDialog()
+		=> this.InvokeAsyncEx(_ => Sphere10Framework.Instance.ServiceProvider.GetService<IProductReportBugDialog>().ShowDialogAsync(this));
 
-	public virtual void ShowRequestFeatureDialog() {
-		var dialog = Sphere10Framework.Instance.ServiceProvider.GetService<IProductRequestFeatureDialog>();
-		dialog.ShowDialog();
-	}
+	public virtual Task ShowRequestFeatureDialog()
+		=> this.InvokeAsyncEx(_ => Sphere10Framework.Instance.ServiceProvider.GetService<IProductRequestFeatureDialog>().ShowDialogAsync(this));
 
-	public virtual void ShowAboutBox() {
-		var dialog = Sphere10Framework.Instance.ServiceProvider.GetService<IAboutBox>();
-		dialog.ShowDialog();
-	}
+	public virtual Task ShowAboutBox()
+		=> this.InvokeAsyncEx(_ => Sphere10Framework.Instance.ServiceProvider.GetService<IAboutBox>().ShowDialogAsync(this));
 
 	public virtual void ReportError(Exception error) {
-		ExecuteInUIFriendlyContext(() => ExceptionDialog.Show(this, error));
+		ExecuteInUIFriendlyContext(() => _ = ExceptionDialog.ShowAsync(this, error));
 	}
 
 	public virtual void ReportError(string msg) {
@@ -268,7 +259,7 @@ public partial class LiteMainForm : ApplicationForm, IMainForm {
 
 	public virtual void ReportInfo(string title, string msg) {
 		ExecuteInUIFriendlyContext(
-			() => DialogEx.Show(
+			async () => await DialogEx.ShowAsync(
 				this,
 				SystemIconType.Information,
 				msg,
@@ -280,27 +271,21 @@ public partial class LiteMainForm : ApplicationForm, IMainForm {
 	}
 
 	public bool AskYN(string question) {
-		return
-			DialogEx.Show(
-				this,
-				SystemIconType.Question,
-				question,
-				"Confirm",
-				MessageBoxButtons.YesNo,
-				MessageBoxIcon.Question
-				//MessageBoxDefaultButton.Button2
-			) == DialogResult.Yes
-				? true
-				: false;
+		// The synchronous interface must pump a modal message loop instead of blocking an async task.
+		var Answer = false;
+		this.InvokeEx(() => {
+			Answer = MessageBox.Show(this, question, "Confirm", MessageBoxButtons.YesNo, MessageBoxIcon.Question, MessageBoxDefaultButton.Button2) == DialogResult.Yes;
+		});
+		return Answer;
 	}
 
 	#endregion
 
 	#region Auxillary Methods
 
-	private void EnforceLicense() {
+	private async Task EnforceLicense() {
 		var licenseEnforcer = Sphere10Framework.Instance.ServiceProvider.GetService<IProductLicenseEnforcer>();
-		licenseEnforcer.EnforceLicense(false);
+		await licenseEnforcer.EnforceLicense(false);
 	}
 
 	private void FireFirstActivatedEvent() {

@@ -142,7 +142,7 @@ public partial class BlockMainForm : MainForm, IBlockManager {
 			plugin.Dispose();
 			RebuildToolBar();
 		} catch (Exception e) {
-			ExceptionDialog.Show(e);
+			_ = ExceptionDialog.ShowAsync(e);
 		}
 	}
 
@@ -171,7 +171,7 @@ public partial class BlockMainForm : MainForm, IBlockManager {
 				ExecuteLinkMenuItem(menuItem as ILinkMenuItem);
 			}
 		} catch (Exception e) {
-			ExceptionDialog.Show(e);
+			_ = ExceptionDialog.ShowAsync(e);
 		}
 	}
 

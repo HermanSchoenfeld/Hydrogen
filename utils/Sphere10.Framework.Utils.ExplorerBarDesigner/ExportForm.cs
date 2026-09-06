@@ -7,6 +7,7 @@
 // This notice must not be removed when duplicating this file or its contents, in whole or in part.
 
 using System.Windows.Forms;
+using System.Threading.Tasks;
 
 namespace Sphere10.Framework.Utils.ExplorerBarDesigner;
 
@@ -15,10 +16,10 @@ public partial class ExportForm : Form {
 		InitializeComponent();
 	}
 
-	public static void ShowDialog(IWin32Window parent, string text) {
-		ExportForm form = new ExportForm();
+	public static async Task ShowDialogAsync(IWin32Window parent, string text) {
+		using var form = new ExportForm();
 		form.textBox1.Text = text;
-		form.ShowDialog(parent);
+		await form.ShowDialogAsync(parent);
 	}
 }
 

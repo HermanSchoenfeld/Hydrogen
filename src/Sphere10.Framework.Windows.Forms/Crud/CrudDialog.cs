@@ -23,29 +23,38 @@ public partial class CrudDialog : Form {
 
 	protected override async void OnLoad(EventArgs e) {
 		base.OnLoad(e);
-		await _crudGrid.RefreshGrid();
+		try {
+			if (_delayedInitializationAction != null) {
+				var Initialization = _delayedInitializationAction;
+				_delayedInitializationAction = null;
+				await Initialization();
+			}
+			await _crudGrid.RefreshGrid();
+		} catch (Exception Error) {
+			await ExceptionDialog.ShowAsync(this, Error);
+		}
 	}
 
-	public static void Show<TEntity>(IWin32Window window, string title, IEnumerable<ICrudGridColumn> gridBindings, DataSourceCapabilities capabilities, IDataSource<TEntity> dataSource) {
-		Show(window, title, gridBindings, typeof(DefaultCrudEntityEditor), capabilities, dataSource);
+	public static Task ShowAsync<TEntity>(IWin32Window window, string title, IEnumerable<ICrudGridColumn> gridBindings, DataSourceCapabilities capabilities, IDataSource<TEntity> dataSource) {
+		return ShowAsync(window, title, gridBindings, typeof(DefaultCrudEntityEditor), capabilities, dataSource);
 	}
 
-	public static void Show<TEntity>(string title, IEnumerable<ICrudGridColumn> gridBindings, DataSourceCapabilities capabilities, IDataSource<TEntity> dataSource) {
-		Show(null, title, gridBindings, typeof(DefaultCrudEntityEditor), capabilities, dataSource);
+	public static Task ShowAsync<TEntity>(string title, IEnumerable<ICrudGridColumn> gridBindings, DataSourceCapabilities capabilities, IDataSource<TEntity> dataSource) {
+		return ShowAsync(null, title, gridBindings, typeof(DefaultCrudEntityEditor), capabilities, dataSource);
 	}
 
-	public static void Show<TEntity>(string title, IEnumerable<ICrudGridColumn> gridBindings, Type entityEditorType, DataSourceCapabilities capabilities, IDataSource<TEntity> dataSource) {
-		Show(null, title, gridBindings, entityEditorType, capabilities, dataSource);
+	public static Task ShowAsync<TEntity>(string title, IEnumerable<ICrudGridColumn> gridBindings, Type entityEditorType, DataSourceCapabilities capabilities, IDataSource<TEntity> dataSource) {
+		return ShowAsync(null, title, gridBindings, entityEditorType, capabilities, dataSource);
 	}
 
-	public static void Show<TEntity>(IWin32Window window, string title, IEnumerable<ICrudGridColumn> gridBindings, Type entityEditorType, DataSourceCapabilities capabilities, IDataSource<TEntity> dataSource) {
-		var crudDialog = new CrudDialog();
+	public static async Task ShowAsync<TEntity>(IWin32Window window, string title, IEnumerable<ICrudGridColumn> gridBindings, Type entityEditorType, DataSourceCapabilities capabilities, IDataSource<TEntity> dataSource) {
+		using var crudDialog = new CrudDialog();
 		crudDialog.Text = title;
-		crudDialog.SetCrudParameters(gridBindings, entityEditorType, capabilities, dataSource);
-		crudDialog.ShowDialog(window);
+		await crudDialog.SetCrudParameters(gridBindings, entityEditorType, capabilities, dataSource);
+		await crudDialog.ShowDialogAsync(window);
 	}
 
-	public void SetCrudParameters<TEntity>(IEnumerable<ICrudGridColumn> gridBindings, Type entityEditorType, DataSourceCapabilities capabilities, IDataSource<TEntity> dataSource) {
+	public async Task SetCrudParameters<TEntity>(IEnumerable<ICrudGridColumn> gridBindings, Type entityEditorType, DataSourceCapabilities capabilities, IDataSource<TEntity> dataSource) {
 		var initializationAction =
 			new Func<Task>(async () => {
 				try {
@@ -55,30 +64,24 @@ public partial class CrudDialog : Form {
 					await _crudGrid.SetDataSource(dataSource);
 					_crudGrid.Capabilities = capabilities;
 				} catch (Exception error) {
-					ExceptionDialog.Show(this, error);
+					await ExceptionDialog.ShowAsync(this, error);
 				}
 			});
 
 		if (!IsHandleCreated)
 			_delayedInitializationAction = initializationAction;
 		else
-			initializationAction();
+			await initializationAction();
 	}
 
-	private void _okButton_Click(object sender, EventArgs e) {
+	private async void _okButton_Click(object sender, EventArgs e) {
 		try {
 			Close();
 		} catch (Exception error) {
-			ExceptionDialog.Show(this, error);
+			await ExceptionDialog.ShowAsync(this, error);
 		}
 	}
 
-
-	protected override async void OnHandleCreated(EventArgs e) {
-		base.OnHandleCreated(e);
-		if (_delayedInitializationAction != null)
-			await _delayedInitializationAction();
-	}
 
 }
 

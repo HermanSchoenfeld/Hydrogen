@@ -74,7 +74,7 @@ internal class ResizableAppointmentCellController : BaseCellController {
 		}
 	}
 
-	public override void OnMouseUp(CellContext sender, MouseEventArgs e) {
+	public override async void OnMouseUp(CellContext sender, MouseEventArgs e) {
 		if (_resizing) {
 			_resizing = false;
 			CurrentCursor = Cursors.Default;
@@ -82,7 +82,7 @@ internal class ResizableAppointmentCellController : BaseCellController {
 			var col = cell.Column;
 			var row = cell.Row;
 			Owner.TransformGridToModel(ref col, ref row);
-			Owner.FireAppointmentResizingFinished();
+			await Owner.FireAppointmentResizingFinishedAsync();
 		} else {
 			base.OnMouseUp(sender, e);
 		}

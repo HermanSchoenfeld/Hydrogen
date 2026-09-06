@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace Sphere10.Framework.Windows.Forms;
@@ -21,37 +22,33 @@ public class ExceptionDialog : DialogEx {
 		TopMost = false;
 	}
 
-	protected override void OnProcessButton(DialogExResult button) {
+	protected override async Task OnProcessButtonAsync(DialogExResult button) {
 		if (button == DialogExResult.Button2) {
-			var detailForm = new TextEditorForm(Exception.ToDiagnosticString());
-			detailForm.ShowDialog(this);
-		} else base.OnProcessButton(button);
-	}
-
-	public static void Show(Exception error) {
-		Show("Error", error);
-	}
-
-
-	public static void Show(string title, Exception error) {
-		Show(null, title, error);
-	}
-
-	public static void Show(IWin32Window owner, Exception error) {
-		Show(owner, "Error", error);
-	}
-
-	public static void Show(IWin32Window owner, string title, Exception error) {
-		if (System.Windows.Forms.Application.OpenForms.Count > 0) {
-			System.Windows.Forms.Application.OpenForms[0].InvokeEx(() => {
-				var form = new ExceptionDialog(title, error);
-				form.ShowDialog(owner);
-			});
+			using var detailForm = new TextEditorForm(Exception.ToDiagnosticString());
+			await detailForm.ShowDialogAsync(this);
 		} else {
-			var form = new ExceptionDialog(title, error);
-			form.ShowDialog(owner);
+			await base.OnProcessButtonAsync(button);
 		}
 	}
+
+	/// <summary>Awaitably shows the exception dialog without blocking the calling context.</summary>
+	public static async Task ShowAsync(IWin32Window owner, string title, Exception error) {
+		if (System.Windows.Forms.Application.OpenForms.Count > 0) {
+			await System.Windows.Forms.Application.OpenForms[0].InvokeAsyncEx(async _ => {
+				using var form = new ExceptionDialog(title, error);
+				await form.ShowDialogAsync(owner);
+			});
+		} else {
+			using var form = new ExceptionDialog(title, error);
+			await form.ShowDialogAsync(owner);
+		}
+	}
+
+	/// <summary>Awaitably shows the exception dialog (titled "Error") without blocking the calling context.</summary>
+	public static Task ShowAsync(IWin32Window owner, Exception error)
+		=> ShowAsync(owner, "Error", error);
+
+	public static Task ShowAsync(Exception Error) => ShowAsync(null, Error);
 
 
 }

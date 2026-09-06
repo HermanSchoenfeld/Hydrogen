@@ -2129,7 +2129,7 @@ public abstract class GridVirtual : CustomScrollControl {
 	/// If not handled by the user (Handled property = false) a MessageBox is used to display the exception.
 	/// </summary>
 	/// <param name="e"></param>
-	public virtual void OnUserException(ExceptionEventArgs e) {
+	public virtual async void OnUserException(ExceptionEventArgs e) {
 #if DEBUG
 		System.Diagnostics.Debug.WriteLine("Exception on editing cell: " + e.Exception.ToString());
 #endif
@@ -2138,8 +2138,8 @@ public abstract class GridVirtual : CustomScrollControl {
 			UserException(this, e);
 
 		if (e.Handled == false) {
-			Sphere10.Framework.Windows.Forms.SourceGrid.DevAgeControls.ErrorDialog.Show(this, e.Exception, "Error");
 			e.Handled = true;
+			await Sphere10.Framework.Windows.Forms.SourceGrid.DevAgeControls.ErrorDialog.ShowAsync(this, e.Exception, "Error");
 		}
 	}
 

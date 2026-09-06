@@ -7,6 +7,7 @@
 // This notice must not be removed when duplicating this file or its contents, in whole or in part.
 
 using System;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace Sphere10.Framework.Windows.Forms;
@@ -108,37 +109,40 @@ public partial class DialogEx : FormEx {
 
 	public bool AlwaysFlag { get; private set; }
 
-	public static DialogResult Show(string text, string caption, MessageBoxButtons buttons, MessageBoxIcon icons)
-		=> Show(SystemIconType.None, text, caption, buttons, icons);
+	public static Task<DialogResult> ShowAsync(string text, string caption, MessageBoxButtons buttons, MessageBoxIcon icons)
+		=> ShowAsync(SystemIconType.None, text, caption, buttons, icons);
 
-	public static DialogResult Show(SystemIconType iconType, string text, string caption, MessageBoxButtons buttons, MessageBoxIcon icons)
-		=> Show(null, iconType, text, caption, buttons, icons);
+	public static Task<DialogResult> ShowAsync(SystemIconType iconType, string text, string caption, MessageBoxButtons buttons, MessageBoxIcon icons)
+		=> ShowAsync(null, iconType, text, caption, buttons, icons);
 
-	public static DialogResult Show(IWin32Window owner, string text, string caption, MessageBoxButtons buttons, MessageBoxIcon icons)
-		=> Show(owner, SystemIconType.Information, text, caption, buttons, icons);
+	public static Task<DialogResult> ShowAsync(IWin32Window owner, string text, string caption, MessageBoxButtons buttons, MessageBoxIcon icons)
+		=> ShowAsync(owner, SystemIconType.Information, text, caption, buttons, icons);
 
-	public static DialogResult Show(IWin32Window owner, SystemIconType iconType, string text, string caption, MessageBoxButtons buttons, MessageBoxIcon icons) {
+	public static async Task<DialogResult> ShowAsync(IWin32Window owner, SystemIconType iconType, string text, string caption, MessageBoxButtons buttons, MessageBoxIcon icons) {
 		//MessageBox.Show(owner, text, caption, buttons, icons);
-		return ToDialogResult(buttons, Show(owner, iconType, caption, text, ToButtonNames(buttons)));
+		return ToDialogResult(buttons, await ShowAsync(owner, iconType, caption, text, ToButtonNames(buttons)));
 	}
 
-	public static DialogExResult Show(SystemIconType iconType, string title, string text, params string[] buttonNames) {
-		var dialog = new DialogEx(iconType, title, text, false, buttonNames);
-		dialog.ShowDialog();
+	/// <summary>Awaitably shows a <see cref="DialogEx"/> modally, returning the pressed button result.</summary>
+	public static async Task<DialogExResult> ShowAsync(SystemIconType iconType, string title, string text, params string[] buttonNames) {
+		using var dialog = new DialogEx(iconType, title, text, false, buttonNames);
+		await dialog.ShowDialogAsync();
 		return dialog.DialogResult;
 	}
 
-	public static DialogExResult Show(IWin32Window owner, SystemIconType iconType, string title, string text, params string[] buttonNames) {
-		var dialog = new DialogEx(iconType, title, text, false, buttonNames);
+	/// <summary>Awaitably shows a <see cref="DialogEx"/> modally owned by <paramref name="owner"/>, returning the pressed button result.</summary>
+	public static async Task<DialogExResult> ShowAsync(IWin32Window owner, SystemIconType iconType, string title, string text, params string[] buttonNames) {
+		using var dialog = new DialogEx(iconType, title, text, false, buttonNames);
 		dialog.StartPosition = FormStartPosition.CenterParent;
-		dialog.ShowDialog(owner);
+		await dialog.ShowDialogAsync(owner);
 		return dialog.DialogResult;
 	}
 
 	public new DialogExResult DialogResult { get; private set; }
 
-	protected virtual void OnProcessButton(DialogExResult button) {
+	protected virtual Task OnProcessButtonAsync(DialogExResult button) {
 		CloseWithResult(button);
+		return Task.CompletedTask;
 	}
 
 	protected void CloseWithResult(DialogExResult result) {
@@ -146,35 +150,35 @@ public partial class DialogEx : FormEx {
 		Close();
 	}
 
-	private void button1_Click(object sender, EventArgs e) {
+	private async void button1_Click(object sender, EventArgs e) {
 		try {
-			OnProcessButton(DialogExResult.Button1);
+			await OnProcessButtonAsync(DialogExResult.Button1);
 		} catch (Exception error) {
 			//
 		}
 	}
 
-	private void button2_Click(object sender, EventArgs e) {
+	private async void button2_Click(object sender, EventArgs e) {
 		try {
-			OnProcessButton(DialogExResult.Button2);
-		} catch (Exception error) {
-			//
-		}
-
-	}
-
-	private void button3_Click(object sender, EventArgs e) {
-		try {
-			OnProcessButton(DialogExResult.Button3);
+			await OnProcessButtonAsync(DialogExResult.Button2);
 		} catch (Exception error) {
 			//
 		}
 
 	}
 
-	private void button4_Click(object sender, EventArgs e) {
+	private async void button3_Click(object sender, EventArgs e) {
 		try {
-			OnProcessButton(DialogExResult.Button4);
+			await OnProcessButtonAsync(DialogExResult.Button3);
+		} catch (Exception error) {
+			//
+		}
+
+	}
+
+	private async void button4_Click(object sender, EventArgs e) {
+		try {
+			await OnProcessButtonAsync(DialogExResult.Button4);
 		} catch (Exception error) {
 			//
 		}

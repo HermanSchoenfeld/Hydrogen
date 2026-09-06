@@ -69,33 +69,33 @@ public partial class MainForm : LiteMainForm {
 
 	#region Event Handlers
 
-	protected virtual void RequestAFeature_Click(object sender, EventArgs e) {
+	protected virtual async void RequestAFeature_Click(object sender, EventArgs e) {
 		try {
-			ShowRequestFeatureDialog();
+			await ShowRequestFeatureDialog();
 		} catch (Exception error) {
 			ReportError(error);
 		}
 	}
 
-	protected virtual void SendComment_Click(object sender, EventArgs e) {
+	protected virtual async void SendComment_Click(object sender, EventArgs e) {
 		try {
-			ShowSendCommentDialog();
+			await ShowSendCommentDialog();
 		} catch (Exception error) {
 			ReportError(error);
 		}
 	}
 
-	protected virtual void ReportABug_Click(object sender, EventArgs e) {
+	protected virtual async void ReportABug_Click(object sender, EventArgs e) {
 		try {
-			ShowSubmitBugReportDialog();
+			await ShowSubmitBugReportDialog();
 		} catch (Exception error) {
 			ReportError(error);
 		}
 	}
 
-	protected virtual void About_Click(object sender, EventArgs e) {
+	protected virtual async void About_Click(object sender, EventArgs e) {
 		try {
-			ShowAboutBox();
+			await ShowAboutBox();
 		} catch (Exception error) {
 			ReportError(error);
 		}
@@ -119,11 +119,11 @@ public partial class MainForm : LiteMainForm {
 		}
 	}
 
-	protected virtual void PurchaseFullVersion_Click(object sender, EventArgs e) {
+	protected virtual async void PurchaseFullVersion_Click(object sender, EventArgs e) {
 		try {
 			var productLicenseEnforcer = Sphere10Framework.Instance.ServiceProvider.GetService<IProductLicenseEnforcer>();
 			productLicenseEnforcer.CalculateRights(out var nagMessage);
-			ShowNagScreen(nagMessage);
+			await ShowNagScreen(nagMessage);
 		} catch (Exception error) {
 			ReportError(error);
 		}

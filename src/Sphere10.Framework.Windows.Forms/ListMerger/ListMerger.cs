@@ -147,7 +147,7 @@ public partial class ListMerger : UserControl {
 
 	#region Handlers
 
-	private void _moveLeftButton_Click(object sender, EventArgs e) {
+	private async void _moveLeftButton_Click(object sender, EventArgs e) {
 		try {
 			switch (MergeMode) {
 				case ListMergeMode.CopyLeftToRight:
@@ -162,11 +162,11 @@ public partial class ListMerger : UserControl {
 					break;
 			}
 		} catch (Exception error) {
-			ExceptionDialog.Show(this, error);
+			await ExceptionDialog.ShowAsync(this, error);
 		}
 	}
 
-	private void _moveRightButton_Click(object sender, EventArgs e) {
+	private async void _moveRightButton_Click(object sender, EventArgs e) {
 		try {
 			switch (MergeMode) {
 				case ListMergeMode.CopyLeftToRight:
@@ -181,7 +181,7 @@ public partial class ListMerger : UserControl {
 					break;
 			}
 		} catch (Exception error) {
-			ExceptionDialog.Show(this, error);
+			await ExceptionDialog.ShowAsync(this, error);
 		}
 	}
 

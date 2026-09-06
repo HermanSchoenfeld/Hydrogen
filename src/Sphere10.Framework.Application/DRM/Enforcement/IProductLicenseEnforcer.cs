@@ -7,6 +7,7 @@
 // This notice must not be removed when duplicating this file or its contents, in whole or in part.
 
 using System;
+using System.Threading.Tasks;
 
 namespace Sphere10.Framework.Application;
 
@@ -15,7 +16,7 @@ public interface IProductLicenseEnforcer {
 
 	bool ValidateLicenseCommand(ProductLicenseActivationDTO licenseActivation, SignedItem<ProductLicenseCommandDTO> command);
 
-	void EnforceLicense(bool suppressNag);
+	Task EnforceLicense(bool suppressNag);
 
 	ProductRights CalculateRights(out string nagMessage);
 

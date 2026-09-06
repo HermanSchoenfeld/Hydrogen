@@ -10,6 +10,7 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace Sphere10.Framework.Windows.Forms;
@@ -64,20 +65,20 @@ public partial class PasswordDialog : Form {
 
 	#region Static Methods
 
-	public static DialogResult Show(IWin32Window owner, string title, string text, out string password, Func<string, IEnumerable<string>> policyValidator = null) {
-		var dialog = new PasswordDialog(title, text, policyValidator);
+	/// <summary>Awaitably shows the password dialog, returning the result and entered password.</summary>
+	public static async Task<(DialogResult Result, string Password)> ShowAsync(IWin32Window owner, string title, string text, Func<string, IEnumerable<string>> policyValidator = null) {
+		using var dialog = new PasswordDialog(title, text, policyValidator);
 		var startPosition = owner != null ? FormStartPosition.CenterParent : FormStartPosition.WindowsDefaultLocation;
 		dialog.StartPosition = startPosition;
-		dialog.ShowDialog(owner);
-		password = dialog.Password;
-		return dialog.DialogResult;
+		var result = await dialog.ShowDialogAsync(owner);
+		return (result, dialog.Password);
 	}
 
 	#endregion
 
 	#region Event Handlers
 
-	private void _okButton_Click(object sender, EventArgs e) {
+	private async void _okButton_Click(object sender, EventArgs e) {
 		try {
 			if (ValidatePassword()) {
 				this.DialogResult = DialogResult.OK;
@@ -85,27 +86,27 @@ public partial class PasswordDialog : Form {
 				Close();
 			}
 		} catch (Exception error) {
-			ExceptionDialog.Show(this, error);
+			await ExceptionDialog.ShowAsync(this, error);
 		}
 	}
 
-	private void _cancelButton_Click(object sender, EventArgs e) {
+	private async void _cancelButton_Click(object sender, EventArgs e) {
 		try {
 			this.DialogResult = DialogResult.Cancel;
 			Password = null;
 			Close();
 		} catch (Exception error) {
-			ExceptionDialog.Show(this, error);
+			await ExceptionDialog.ShowAsync(this, error);
 		}
 	}
 
-	private void _showPasswordCheckBox_CheckedChanged(object sender, EventArgs e) {
+	private async void _showPasswordCheckBox_CheckedChanged(object sender, EventArgs e) {
 		try {
 			_passwordTextBox.PasswordChar =
 				_repeatTextBox.PasswordChar =
 					_hidePasswordCheckBox.Checked ? '*' : (char)0;
 		} catch (Exception error) {
-			ExceptionDialog.Show(this, error);
+			await ExceptionDialog.ShowAsync(this, error);
 		}
 	}
 

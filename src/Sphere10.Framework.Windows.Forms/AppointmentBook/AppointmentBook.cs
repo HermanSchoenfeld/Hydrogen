@@ -7,6 +7,7 @@
 // This notice must not be removed when duplicating this file or its contents, in whole or in part.
 
 using System;
+using System.Threading.Tasks;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
@@ -396,12 +397,12 @@ public class AppointmentBook : BaseAppointmentBook {
 		try {
 			return ViewModel.GetAppointmentBlockAt(col, row) != null;
 		} catch (Exception error) {
-			ExceptionDialog.Show(this, error);
+			_ = ExceptionDialog.ShowAsync(this, error);
 			return false;
 		}
 	}
 
-	public override void BeginDragging(int col, int row, Point mouseLocation) {
+	public override async void BeginDragging(int col, int row, Point mouseLocation) {
 		try {
 			// Select the appointment if not selected
 			var appointment = ViewModel.GetAppointmentBlockAt(col, row);
@@ -482,21 +483,21 @@ public class AppointmentBook : BaseAppointmentBook {
 			if (result.HasFlag(DragDropEffects.Copy))
 				RefreshFromDataSource(); // if we dropped into another grid, then the source (this) needs to hydrate too
 		} catch (Exception error) {
-			ExceptionDialog.Show(this, error);
+			await ExceptionDialog.ShowAsync(this, error);
 		}
 	}
 
-	private void ResourceCalendar_DragGiveFeedback(object sender, GiveFeedbackEventArgs e) {
+	private async void ResourceCalendar_DragGiveFeedback(object sender, GiveFeedbackEventArgs e) {
 		try {
 			e.UseDefaultCursors = e.Effect != DragDropEffects.Move;
 			if (e.UseDefaultCursors)
 				SetDragCursor(null, null);
 		} catch (Exception error) {
-			ExceptionDialog.Show(this, error);
+			await ExceptionDialog.ShowAsync(this, error);
 		}
 	}
 
-	private void ResourceCalendar_DragDrop(object sender, DragEventArgs e) {
+	private async void ResourceCalendar_DragDrop(object sender, DragEventArgs e) {
 		try {
 			if (!e.Data.GetDataPresent(typeof(AppointmentDragObject))) {
 				e.Effect = DragDropEffects.None;
@@ -528,27 +529,27 @@ public class AppointmentBook : BaseAppointmentBook {
 			else
 				e.Effect = DragDropEffects.Copy; // drag-n-drop occured between two separate controls
 		} catch (Exception error) {
-			ExceptionDialog.Show(this, error);
+			await ExceptionDialog.ShowAsync(this, error);
 		}
 	}
 
-	private void ResourceCalendar_DragOver(object sender, DragEventArgs e) {
+	private async void ResourceCalendar_DragOver(object sender, DragEventArgs e) {
 		try {
 			ProcessAppointmentDraggedOver(e);
 		} catch (Exception error) {
-			ExceptionDialog.Show(this, error);
+			await ExceptionDialog.ShowAsync(this, error);
 		}
 	}
 
-	private void ResourceCalendar_DragLeave(object sender, EventArgs e) {
+	private async void ResourceCalendar_DragLeave(object sender, EventArgs e) {
 		try {
 			// ...
 		} catch (Exception error) {
-			ExceptionDialog.Show(this, error);
+			await ExceptionDialog.ShowAsync(this, error);
 		}
 	}
 
-	private void ResourceCalendar_DragEnter(object sender, DragEventArgs e) {
+	private async void ResourceCalendar_DragEnter(object sender, DragEventArgs e) {
 		try {
 			ProcessAppointmentDraggedOver(e);
 			if (!e.Data.GetDataPresent(typeof(AppointmentDragObject))) {
@@ -559,7 +560,7 @@ public class AppointmentBook : BaseAppointmentBook {
 			Debug.Assert(appointmentDragObject != null, "appointmentDragObject != null");
 			SetDragCursor(true, appointmentDragObject);
 		} catch (Exception error) {
-			ExceptionDialog.Show(this, error);
+			await ExceptionDialog.ShowAsync(this, error);
 		}
 	}
 
@@ -641,7 +642,7 @@ public class AppointmentBook : BaseAppointmentBook {
 			if (AppointmentSelected != null)
 				AppointmentSelected(new AppointmentEvent { Source = this, SourceColumn = column, Appointment = appointment });
 		} catch (Exception error) {
-			ExceptionDialog.Show(this, error);
+			_ = ExceptionDialog.ShowAsync(this, error);
 		}
 	}
 
@@ -651,7 +652,7 @@ public class AppointmentBook : BaseAppointmentBook {
 			if (AppointmentDeselected != null)
 				AppointmentDeselected(new AppointmentEvent { Source = this, SourceColumn = column, Appointment = appointment });
 		} catch (Exception error) {
-			ExceptionDialog.Show(this, error);
+			_ = ExceptionDialog.ShowAsync(this, error);
 		}
 	}
 
@@ -670,7 +671,7 @@ public class AppointmentBook : BaseAppointmentBook {
 				}
 			}
 		} catch (Exception error) {
-			ExceptionDialog.Show(this, error);
+			_ = ExceptionDialog.ShowAsync(this, error);
 		}
 	}
 
@@ -698,7 +699,7 @@ public class AppointmentBook : BaseAppointmentBook {
 				);
 			}
 		} catch (Exception error) {
-			ExceptionDialog.Show(this, error);
+			_ = ExceptionDialog.ShowAsync(this, error);
 		}
 	}
 
@@ -751,11 +752,11 @@ public class AppointmentBook : BaseAppointmentBook {
 				);
 			}
 		} catch (Exception error) {
-			ExceptionDialog.Show(this, error);
+			_ = ExceptionDialog.ShowAsync(this, error);
 		}
 	}
 
-	internal void FireAppointmentResizingFinished() {
+	internal async Task FireAppointmentResizingFinishedAsync() {
 		try {
 			_resizing = false;
 			var appointment = ViewModel.GetAppointmentBlockAt(_resizingStart.Item1, _resizingStart.Item2);
@@ -781,7 +782,7 @@ public class AppointmentBook : BaseAppointmentBook {
 			string errorMessage;
 			bool resizeAccepted = OnAppointmentRescheduled(column.ColumnDataObject, appointment.AppointmentDataObject, newStartTime, newEndTime, out errorMessage);
 			if (!resizeAccepted) {
-				DialogEx.Show(SystemIconType.Error, "Scheduling Error", errorMessage ?? "Unable to reschedule appointment", "OK");
+				await DialogEx.ShowAsync(this, SystemIconType.Error, "Scheduling Error", errorMessage ?? "Unable to reschedule appointment", "OK");
 			} else {
 				if (AppointmentResizingFinished != null) {
 					foreach (EventHandlerEx<AppointmentResizingFinishedEvent> handler in AppointmentResizingFinished.GetInvocationList()) {
@@ -795,7 +796,7 @@ public class AppointmentBook : BaseAppointmentBook {
 						handler.Invoke(eventArgs);
 						resizeAccepted = !eventArgs.Cancel;
 						if (!resizeAccepted) {
-							DialogEx.Show(SystemIconType.Error, "Scheduling Error", errorMessage ?? "Unable to reschedule appointment", "OK");
+							await DialogEx.ShowAsync(this, SystemIconType.Error, "Scheduling Error", errorMessage ?? "Unable to reschedule appointment", "OK");
 							ClearSelection();
 							break;
 						}
@@ -807,7 +808,7 @@ public class AppointmentBook : BaseAppointmentBook {
 				RescheduleAppointment(appointment.AppointmentDataObject, column.ColumnDataObject, column.ColumnDataObject, newStartTime, newEndTime);
 			}
 		} catch (Exception error) {
-			ExceptionDialog.Show(this, error);
+			await ExceptionDialog.ShowAsync(this, error);
 		}
 	}
 
@@ -840,7 +841,7 @@ public class AppointmentBook : BaseAppointmentBook {
 			}
 			return dragAccepted;
 		} catch (Exception error) {
-			ExceptionDialog.Show(this, error);
+			_ = ExceptionDialog.ShowAsync(this, error);
 			return false;
 		}
 	}
@@ -863,7 +864,7 @@ public class AppointmentBook : BaseAppointmentBook {
 				);
 			}
 		} catch (Exception error) {
-			ExceptionDialog.Show(this, error);
+			_ = ExceptionDialog.ShowAsync(this, error);
 		}
 	}
 
@@ -907,7 +908,7 @@ public class AppointmentBook : BaseAppointmentBook {
 			}
 			result = dragCompatible;
 		} catch (Exception error) {
-			ExceptionDialog.Show(this, error);
+			_ = ExceptionDialog.ShowAsync(this, error);
 			result = false;
 		} finally {
 			_lastDraggedOver = Tuple.Create(col, row, result);
@@ -961,7 +962,7 @@ public class AppointmentBook : BaseAppointmentBook {
 			}
 			return dragAccepted;
 		} catch (Exception error) {
-			ExceptionDialog.Show(this, error);
+			_ = ExceptionDialog.ShowAsync(this, error);
 			return false;
 		}
 	}
@@ -1003,7 +1004,7 @@ public class AppointmentBook : BaseAppointmentBook {
 				);
 			}
 		} catch (Exception error) {
-			ExceptionDialog.Show(this, error);
+			_ = ExceptionDialog.ShowAsync(this, error);
 		}
 	}
 

@@ -107,6 +107,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sphere10.Framework.Windows.
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Sphere10.Framework.Consensus.Tests", "..\tests\Sphere10.Framework.Consensus.Tests\Sphere10.Framework.Consensus.Tests.csproj", "{1B4C361A-A380-4ECE-97CF-E614EFF23608}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sphere10.Framework.Windows.Forms.Tests", "..\tests\Sphere10.Framework.Windows.Forms.Tests\Sphere10.Framework.Windows.Forms.Tests.csproj", "{981EFC3F-F3C1-4DF5-82CC-8D3297B09B17}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -633,6 +635,18 @@ Global
 		{1B4C361A-A380-4ECE-97CF-E614EFF23608}.Release|x64.Build.0 = Release|Any CPU
 		{1B4C361A-A380-4ECE-97CF-E614EFF23608}.Release|x86.ActiveCfg = Release|Any CPU
 		{1B4C361A-A380-4ECE-97CF-E614EFF23608}.Release|x86.Build.0 = Release|Any CPU
+		{981EFC3F-F3C1-4DF5-82CC-8D3297B09B17}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{981EFC3F-F3C1-4DF5-82CC-8D3297B09B17}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{981EFC3F-F3C1-4DF5-82CC-8D3297B09B17}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{981EFC3F-F3C1-4DF5-82CC-8D3297B09B17}.Debug|x64.Build.0 = Debug|Any CPU
+		{981EFC3F-F3C1-4DF5-82CC-8D3297B09B17}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{981EFC3F-F3C1-4DF5-82CC-8D3297B09B17}.Debug|x86.Build.0 = Debug|Any CPU
+		{981EFC3F-F3C1-4DF5-82CC-8D3297B09B17}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{981EFC3F-F3C1-4DF5-82CC-8D3297B09B17}.Release|Any CPU.Build.0 = Release|Any CPU
+		{981EFC3F-F3C1-4DF5-82CC-8D3297B09B17}.Release|x64.ActiveCfg = Release|Any CPU
+		{981EFC3F-F3C1-4DF5-82CC-8D3297B09B17}.Release|x64.Build.0 = Release|Any CPU
+		{981EFC3F-F3C1-4DF5-82CC-8D3297B09B17}.Release|x86.ActiveCfg = Release|Any CPU
+		{981EFC3F-F3C1-4DF5-82CC-8D3297B09B17}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -652,6 +666,7 @@ Global
 		{9A1EF7C9-A988-0039-A0DB-D84F5F25BD0D} = {E7705E7B-D04B-488C-8442-149A029F34B8}
 		{E5D80C09-4C9D-4F1D-9D94-D2C84C483950} = {9EA2842C-7248-4410-B9DB-16E3E32E2026}
 		{1B4C361A-A380-4ECE-97CF-E614EFF23608} = {E7705E7B-D04B-488C-8442-149A029F34B8}
+		{981EFC3F-F3C1-4DF5-82CC-8D3297B09B17} = {E7705E7B-D04B-488C-8442-149A029F34B8}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {A6BF0BD3-FB17-4EDB-AFBF-08A34BD2E2B6}

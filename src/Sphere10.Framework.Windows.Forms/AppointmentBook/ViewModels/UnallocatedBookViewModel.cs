@@ -31,7 +31,7 @@ public class UnallocatedBookViewModel : AppointmentBookViewModel {
 			RecreateCellDisplays();
 		} catch (Exception error) {
 			SystemLog.Exception(error);
-			ExceptionDialog.Show(error);
+			_ = ExceptionDialog.ShowAsync(error);
 		}
 	}
 

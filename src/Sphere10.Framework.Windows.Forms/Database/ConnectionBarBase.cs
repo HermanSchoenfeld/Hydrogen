@@ -62,7 +62,7 @@ public partial class ConnectionBarBase : UserControlEx, IDatabaseConnectionProvi
 		get { throw new NotImplementedException(); }
 	}
 
-	public void SelectArtificialKeysFile() {
+	public async Task SelectArtificialKeysFile() {
 		var dialog = new OpenFileDialog();
 		if (dialog.ShowDialog(this) == DialogResult.OK) {
 			if (string.IsNullOrEmpty(dialog.FileName))
@@ -76,28 +76,28 @@ public partial class ConnectionBarBase : UserControlEx, IDatabaseConnectionProvi
 				this._artificialKeysMenuItem.Text = "Remove Artificial Keys";
 			} catch (Exception error) {
 				var summaryError = new SoftwareException(error, "The selected file '{0}' is not a valid Artificial Keys file.".FormatWith(dialog.FileName));
-				ExceptionDialog.Show(this, "Invalid Artificial Keys", summaryError);
+				await ExceptionDialog.ShowAsync(this, "Invalid Artificial Keys", summaryError);
 				ArtificialKeysFile = null;
 			}
 		}
 	}
 
-	private void _artificialKeysMenuItem_Click(object sender, EventArgs e) {
+	private async void _artificialKeysMenuItem_Click(object sender, EventArgs e) {
 		try {
 			if (ArtificialKeysFile != null) {
 				ArtificialKeysFile = null;
 				_artificialKeysMenuItem.Text = "Artificial Keys";
-			} else SelectArtificialKeysFile();
+			} else await SelectArtificialKeysFile();
 		} catch (Exception error) {
-			ExceptionDialog.Show(this, "Error", error);
+			await ExceptionDialog.ShowAsync(this, "Error", error);
 		}
 	}
 
-	private void OptionsButton_Click(object sender, EventArgs e) {
+	private async void OptionsButton_Click(object sender, EventArgs e) {
 		try {
 			DatabaseOptionsContextMenu.Show(OptionsButton, new Point(0, OptionsButton.Height));
 		} catch (Exception error) {
-			ExceptionDialog.Show(this, "Error", error);
+			await ExceptionDialog.ShowAsync(this, "Error", error);
 		}
 	}
 }

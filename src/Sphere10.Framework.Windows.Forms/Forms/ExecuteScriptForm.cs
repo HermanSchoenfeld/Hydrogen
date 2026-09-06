@@ -38,7 +38,7 @@ public partial class ExecuteScriptForm : Form {
 
 			Close();
 		} catch (Exception error) {
-			ExceptionDialog.Show("Error", error);
+			await ExceptionDialog.ShowAsync(null, "Error", error);
 		} finally {
 		}
 	}

@@ -46,7 +46,7 @@ public sealed class CellViewModel {
 			return arr;
 		} catch (Exception error) {
 			SystemLog.Exception(error);
-			ExceptionDialog.Show(error);
+			_ = ExceptionDialog.ShowAsync(error);
 			return new CellViewModel[0];
 		}
 	}

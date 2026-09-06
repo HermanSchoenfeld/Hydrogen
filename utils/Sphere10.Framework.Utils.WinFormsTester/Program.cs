@@ -35,8 +35,20 @@ static class Program {
 	static void Main(string[] args) {
 		System.Windows.Forms.Application.EnableVisualStyles();
 		System.Windows.Forms.Application.SetCompatibleTextRenderingDefault(false);
-		AppDomain.CurrentDomain.UnhandledException += (s, e) => Tools.Lambda.ActionIgnoringExceptions(() => ExceptionDialog.Show("Error", (Exception)e.ExceptionObject)).Invoke();
-		System.Windows.Forms.Application.ThreadException += (xs, xe) => Tools.Lambda.ActionIgnoringExceptions(() => ExceptionDialog.Show("Error", xe.Exception)).Invoke();
+		AppDomain.CurrentDomain.UnhandledException += async (Sender, Args) => {
+			try {
+				await ExceptionDialog.ShowAsync(null, "Error", (Exception)Args.ExceptionObject);
+			} catch {
+				// Avoid throwing again from the last-chance exception handler.
+			}
+		};
+		System.Windows.Forms.Application.ThreadException += async (Sender, Args) => {
+			try {
+				await ExceptionDialog.ShowAsync(null, "Error", Args.Exception);
+			} catch {
+				// Avoid re-entering the UI exception handler if displaying the error fails.
+			}
+		};
 		SystemLog.RegisterLogger(new DebugLogger());
 
 		Sphere10Framework.Instance

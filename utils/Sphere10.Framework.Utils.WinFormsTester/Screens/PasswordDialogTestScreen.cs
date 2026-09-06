@@ -23,16 +23,14 @@ public partial class PasswordDialogTestScreen : ApplicationScreen {
 		_outputTextWriter = new TextBoxWriter(_outputTextBox);
 	}
 
-	private void _standardButton_Click(object sender, EventArgs e) {
-		string password;
-		var result = PasswordDialog.Show(this, "Password", "Change your Administrator password", out password);
-		_outputTextWriter.WriteLine("Result = {0}, Password = {1}", result, password);
+	private async void _standardButton_Click(object sender, EventArgs e) {
+		var (Result, Password) = await PasswordDialog.ShowAsync(this, "Password", "Change your Administrator password");
+		_outputTextWriter.WriteLine("Result = {0}, Password = {1}", Result, Password);
 	}
 
-	private void _customButton_Click(object sender, EventArgs e) {
-		string password;
-		var result = PasswordDialog.Show(this, "Password", "Change your Administrator password", out password, PolicyValidator);
-		_outputTextWriter.WriteLine("Result = {0}, Password = {1}", result, password);
+	private async void _customButton_Click(object sender, EventArgs e) {
+		var (Result, Password) = await PasswordDialog.ShowAsync(this, "Password", "Change your Administrator password", PolicyValidator);
+		_outputTextWriter.WriteLine("Result = {0}, Password = {1}", Result, Password);
 	}
 
 
@@ -58,8 +56,8 @@ public partial class PasswordDialogTestScreen : ApplicationScreen {
 			yield return "Passwords need to contain 5 or more characters";
 	}
 
-	private void _logonButton_Click(object sender, EventArgs e) {
-		var logonResult = LogonDialog.Show(this, "Logon", "Logon to Cranewatch", Authenticator);
+	private async void _logonButton_Click(object sender, EventArgs e) {
+		var logonResult = await LogonDialog.ShowAsync(this, "Logon", "Logon to Cranewatch", Authenticator);
 		_outputTextWriter.WriteLine("LogonResult = {0}, UserObject = {1}", logonResult.ResultCode, logonResult.UserObject ?? "(None)");
 	}
 

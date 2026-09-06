@@ -7,6 +7,7 @@
 // This notice must not be removed when duplicating this file or its contents, in whole or in part.
 
 using System;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace Sphere10.Framework.Windows.Forms;
@@ -24,9 +25,10 @@ public partial class GenericEditorForm : Form {
 		_propertyGrid.Enabled = !readOnly;
 	}
 
-	public static void ShowForm(object entity, bool readOnly) {
-		Form form = new GenericEditorForm(entity, readOnly);
-		form.ShowDialog();
+	/// <summary>Awaitably shows the generic editor without blocking the calling context.</summary>
+	public static async Task ShowFormAsync(object entity, bool readOnly) {
+		using var form = new GenericEditorForm(entity, readOnly);
+		await form.ShowDialogAsync();
 	}
 
 	private void _closeButton_Click(object sender, EventArgs e) {

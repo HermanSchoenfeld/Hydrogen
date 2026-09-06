@@ -134,18 +134,18 @@ public partial class EmailTestScreen : ApplicationScreen {
 				await SendAsync();
 			}
 		} catch (Exception ex) {
-			ExceptionDialog.Show(ex);
+			await ExceptionDialog.ShowAsync(ex);
 		}
 
 	}
 
-	private void _sendButton_Click(object sender, EventArgs e) {
+	private async void _sendButton_Click(object sender, EventArgs e) {
 		try {
 			using (_loadingCircle.BeginAnimationScope(this)) {
 				Send();
 			}
 		} catch (Exception ex) {
-			ExceptionDialog.Show(ex);
+			await ExceptionDialog.ShowAsync(ex);
 		}
 
 	}

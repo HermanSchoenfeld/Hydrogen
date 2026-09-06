@@ -7,6 +7,7 @@
 // This notice must not be removed when duplicating this file or its contents, in whole or in part.
 
 using System;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using Sphere10.Framework.Application;
 using Microsoft.Extensions.DependencyInjection;
@@ -36,15 +37,19 @@ public partial class DRMNagDialog : ApplicationForm, INagDialog {
 		NagMessage = nag;
 	}
 
-	private void ShowActivationForm() {
-		DRMProductActivationForm form = new DRMProductActivationForm();
-		if (form.ShowDialog() == DialogResult.OK) {
+	private async Task ShowActivationForm() {
+		using var form = new DRMProductActivationForm();
+		if (await form.ShowDialogAsync(this) == DialogResult.OK) {
 			Close();
 		}
 	}
 
-	private void _enterKeyButton_Click(object sender, EventArgs e) {
-		ShowActivationForm();
+	private async void _enterKeyButton_Click(object sender, EventArgs e) {
+		try {
+			await ShowActivationForm();
+		} catch (Exception Error) {
+			await ExceptionDialog.ShowAsync(this, Error);
+		}
 	}
 
 	private void _closeButton_Click(object sender, EventArgs e) {
