@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <IsPackable>true</IsPackable>
 	<PackageReadmeFile>README.md</PackageReadmeFile>
 	<Description>PostgreSQL implementation for Sphere10.Framework.Data abstraction layer. Provides DAC, SQLBuilder, and DatabaseManager for PostgreSQL database access using Npgsql.</Description>
@@ -14,7 +14,7 @@
 	</ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Npgsql" Version="10.0.3" />
+    <PackageReference Include="Npgsql" />
   </ItemGroup>
 
   <ItemGroup>
