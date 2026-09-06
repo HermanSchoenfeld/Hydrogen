@@ -72,12 +72,12 @@ public partial class TestSoundsScreen : ApplicationScreen {
 		PlaySound(Resources.RightClickUp);
 	}
 
-	private void _systemPlayerButton_Click(object sender, EventArgs e) {
+	private async void _systemPlayerButton_Click(object sender, EventArgs e) {
 		try {
 			using var leftClickDownSoundPlayer = new SoundPlayer(Resources.LeftClickDown);
 			leftClickDownSoundPlayer.Play();
 		} catch (Exception ex) {
-			ExceptionDialog.Show(ex);
+			await ExceptionDialog.ShowAsync(ex);
 		}
 	}
 }

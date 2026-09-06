@@ -2,8 +2,9 @@
 
 	<PropertyGroup>
 		<OutputType>WinExe</OutputType>
-		<TargetFramework>net8.0-windows</TargetFramework>
+		<TargetFramework>net10.0-windows</TargetFramework>
 		<UseWindowsForms>true</UseWindowsForms>
+		<NoWarn>$(NoWarn);WFO1000</NoWarn>
 		<ForceDesignerDpiUnaware>true</ForceDesignerDpiUnaware>
 		<AssemblyName>SystemExpert</AssemblyName>
 		<RootNamespace>SystemExpert</RootNamespace>
@@ -11,9 +12,9 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="System.Diagnostics.EventLog" Version="11.0.0-preview.6.26359.118" />
-		<PackageReference Include="System.Management" Version="11.0.0-preview.6.26359.118" />
-		<PackageReference Include="System.ServiceProcess.ServiceController" Version="11.0.0-preview.6.26359.118" />
+		<PackageReference Include="System.Diagnostics.EventLog" />
+		<PackageReference Include="System.Management" />
+		<PackageReference Include="System.ServiceProcess.ServiceController" />
 	</ItemGroup>
 
 	<ItemGroup>

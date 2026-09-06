@@ -33,12 +33,12 @@ internal class UpdateEntityOnValueChangedController : SourceGrid.Cells.Controlle
 		// validate the change via the data source
 		var result = await _dataSource.ValidateAsync(_entity, CrudAction.Update);
 		if (result.IsFailure) {
-			DialogEx.Show(sender.Grid, SystemIconType.Error, "Unable to update", result.ErrorMessages.ToParagraphCase(), "OK");
+			await DialogEx.ShowAsync(sender.Grid, SystemIconType.Error, "Unable to update", result.ErrorMessages.ToParagraphCase(), "OK");
 			_entity = await _dataSource.RefreshAsync(_entity);
 		} else {
 			await _dataSource.UpdateAsync(_entity);
 		}
-		_grid.NotifyEntityUpdated(_entity);
+		await _grid.NotifyEntityUpdated(_entity);
 	}
 }
 

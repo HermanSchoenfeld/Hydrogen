@@ -9,6 +9,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Drawing.Drawing2D;
 using System.Drawing;
@@ -151,6 +153,39 @@ public static class ControlExtensions {
 		else {
 			System.Windows.Forms.Application.OpenForms.Cast<Form>().Reverse().First().BeginInvoke(action);
 		}
+	}
+
+	/// <summary>
+	/// Awaitably invokes <paramref name="asyncFunc"/> on the control's UI thread. Mirrors <see cref="InvokeEx"/> for async callbacks.
+	/// </summary>
+	public static Task<T> InvokeAsyncEx<T>(this Control control, Func<CancellationToken, Task<T>> asyncFunc, CancellationToken cancellationToken = default) {
+		Guard.ArgumentNotNull(control, nameof(control));
+		Guard.ArgumentNotNull(asyncFunc, nameof(asyncFunc));
+		if (cancellationToken.IsCancellationRequested)
+			return Task.FromCanceled<T>(cancellationToken);
+		var Invoker = GetAsyncInvoker(control);
+		return Invoker.InvokeAsync<T>(Token => new ValueTask<T>(asyncFunc(Token)), cancellationToken);
+	}
+
+	/// <summary>
+	/// Awaitably invokes <paramref name="asyncFunc"/> on the control's UI thread. Non-generic counterpart of <see cref="InvokeAsyncEx{T}"/>.
+	/// </summary>
+	public static Task InvokeAsyncEx(this Control control, Func<CancellationToken, Task> asyncFunc, CancellationToken cancellationToken = default) {
+		Guard.ArgumentNotNull(control, nameof(control));
+		Guard.ArgumentNotNull(asyncFunc, nameof(asyncFunc));
+		if (cancellationToken.IsCancellationRequested)
+			return Task.FromCanceled(cancellationToken);
+		var Invoker = GetAsyncInvoker(control);
+		return Invoker.InvokeAsync(Token => new ValueTask(asyncFunc(Token)), cancellationToken);
+	}
+
+	private static Control GetAsyncInvoker(Control Control) {
+		Guard.Ensure(!Control.IsDisposed, "Cannot invoke on a disposed control.");
+		if (Control.IsHandleCreated)
+			return Control;
+		var Invoker = System.Windows.Forms.Application.OpenForms.Cast<Form>().Reverse().FirstOrDefault(Form => Form.IsHandleCreated && !Form.IsDisposed);
+		Guard.Ensure(Invoker != null, "An open form with a window handle is required to invoke on the UI thread.");
+		return Invoker;
 	}
 
 	public static void EnableChildren(this Control control, bool enabled, params Control[] preserveControls) {

@@ -7,6 +7,7 @@
 // This notice must not be removed when duplicating this file or its contents, in whole or in part.
 
 using System;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace Sphere10.Framework.Windows.Forms.SourceGrid.DevAgeControls;
@@ -96,23 +97,23 @@ public class ErrorDialogDetails : System.Windows.Forms.Form {
 		Exception = p_Exception;
 	}
 
-	public DialogResult ShowDialog(Exception p_Exception, string p_Caption) {
+	public async Task<DialogResult> ShowDialogAsync(Exception p_Exception, string p_Caption) {
 		Text = "Error Details - " + p_Caption;
 		Exception = p_Exception;
 
-		return base.ShowDialog();
+		return await base.ShowDialogAsync();
 	}
 
-	public DialogResult ShowDialog(IWin32Window p_Owner, Exception p_Exception, string p_Caption) {
+	public async Task<DialogResult> ShowDialogAsync(IWin32Window p_Owner, Exception p_Exception, string p_Caption) {
 		Text = "Error Details - " + p_Caption;
 		Exception = p_Exception;
 
-		return base.ShowDialog(p_Owner);
+		return await base.ShowDialogAsync(p_Owner);
 	}
 
-	public static void Show(Exception p_Exception, string p_Caption) {
-		ErrorDialogDetails l_dg = new ErrorDialogDetails(p_Exception, p_Caption);
-		l_dg.ShowDialog();
+	public static async Task ShowAsync(Exception p_Exception, string p_Caption) {
+		using var l_dg = new ErrorDialogDetails(p_Exception, p_Caption);
+		await l_dg.ShowDialogAsync();
 	}
 
 	private void ErrorDialogDetails_Load(object sender, System.EventArgs e) {
@@ -126,9 +127,9 @@ public class ErrorDialogDetails : System.Windows.Forms.Form {
 		}
 	}
 
-	public static void Show(IWin32Window p_Owner, Exception p_Exception, string p_Caption) {
-		ErrorDialogDetails l_dg = new ErrorDialogDetails(p_Exception, p_Caption);
-		l_dg.ShowDialog(p_Owner);
+	public static async Task ShowAsync(IWin32Window p_Owner, Exception p_Exception, string p_Caption) {
+		using var l_dg = new ErrorDialogDetails(p_Exception, p_Caption);
+		await l_dg.ShowDialogAsync(p_Owner);
 	}
 }
 

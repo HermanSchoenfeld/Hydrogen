@@ -7,6 +7,7 @@
 // This notice must not be removed when duplicating this file or its contents, in whole or in part.
 
 using System.ComponentModel;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace Sphere10.Framework.Windows.Forms;
@@ -33,14 +34,14 @@ public partial class EnterTextDialog : Form {
 		UserInput = _textBox.Text;
 	}
 
-	public static bool Show(IWin32Window owner, string title, string text, out string userInput, string prefill = null) {
-		var form = new EnterTextDialog(prefill) {
+	/// <summary>Awaitably shows the dialog, returning the entered text and whether OK was pressed.</summary>
+	public static async Task<(bool Accepted, string UserInput)> ShowAsync(IWin32Window owner, string title, string text, string prefill = null) {
+		using var form = new EnterTextDialog(prefill) {
 			Text = title,
 			Instructions = text,
 		};
-		var result = form.ShowDialog();
-		userInput = form.UserInput;
-		return result == DialogResult.OK;
+		var result = await form.ShowDialogAsync(owner);
+		return (result == DialogResult.OK, form.UserInput);
 	}
 }
 

@@ -271,7 +271,7 @@ public class ListEditor : System.Windows.Forms.UserControl {
 		grid[p_GridRow, p_GridCol].AddController(l_CustomEvents);
 	}
 
-	private void btAdd_Click(object sender, System.EventArgs e) {
+	private async void btAdd_Click(object sender, System.EventArgs e) {
 		try {
 			int l_Row = grid.RowsCount;
 			grid.Rows.Insert(l_Row);
@@ -281,7 +281,7 @@ public class ListEditor : System.Windows.Forms.UserControl {
 
 			OnListChanged(EventArgs.Empty);
 		} catch (Exception err) {
-			Sphere10.Framework.Windows.Forms.SourceGrid.DevAgeControls.ErrorDialog.Show(this, err, "Error");
+			await Sphere10.Framework.Windows.Forms.SourceGrid.DevAgeControls.ErrorDialog.ShowAsync(this, err, "Error");
 		}
 	}
 
@@ -296,29 +296,29 @@ public class ListEditor : System.Windows.Forms.UserControl {
 		OnListChanged(e);
 	}
 
-	private void btRemove_Click(object sender, System.EventArgs e) {
+	private async void btRemove_Click(object sender, System.EventArgs e) {
 		try {
 			if (grid.Selection.ActivePosition.IsEmpty() == false &&
-			    grid.Selection.ActivePosition.Row >= grid.FixedRows) {
+				grid.Selection.ActivePosition.Row >= grid.FixedRows) {
 				m_List.Remove(grid.Rows[grid.Selection.ActivePosition.Row].Tag);
 				grid.Rows.Remove(grid.Selection.ActivePosition.Row);
 
 				OnListChanged(EventArgs.Empty);
 			}
 		} catch (Exception err) {
-			Sphere10.Framework.Windows.Forms.SourceGrid.DevAgeControls.ErrorDialog.Show(this, err, "Error");
+			await Sphere10.Framework.Windows.Forms.SourceGrid.DevAgeControls.ErrorDialog.ShowAsync(this, err, "Error");
 		}
 	}
 
-	private void btrRefreshList_Click(object sender, System.EventArgs e) {
+	private async void btrRefreshList_Click(object sender, System.EventArgs e) {
 		try {
 			LoadList();
 		} catch (Exception err) {
-			Sphere10.Framework.Windows.Forms.SourceGrid.DevAgeControls.ErrorDialog.Show(this, err, "Error");
+			await Sphere10.Framework.Windows.Forms.SourceGrid.DevAgeControls.ErrorDialog.ShowAsync(this, err, "Error");
 		}
 	}
 
-	private void btUp_Click(object sender, System.EventArgs e) {
+	private async void btUp_Click(object sender, System.EventArgs e) {
 		try {
 			if (grid.Selection.ActivePosition.IsEmpty() == false &&
 			    grid.Selection.ActivePosition.Row >= grid.FixedRows) {
@@ -334,11 +334,11 @@ public class ListEditor : System.Windows.Forms.UserControl {
 				OnListChanged(EventArgs.Empty);
 			}
 		} catch (Exception err) {
-			Sphere10.Framework.Windows.Forms.SourceGrid.DevAgeControls.ErrorDialog.Show(this, err, "Error");
+			await Sphere10.Framework.Windows.Forms.SourceGrid.DevAgeControls.ErrorDialog.ShowAsync(this, err, "Error");
 		}
 	}
 
-	private void btDown_Click(object sender, System.EventArgs e) {
+	private async void btDown_Click(object sender, System.EventArgs e) {
 		try {
 			if (grid.Selection.ActivePosition.IsEmpty() == false &&
 			    grid.Selection.ActivePosition.Row >= grid.FixedRows &&
@@ -355,7 +355,7 @@ public class ListEditor : System.Windows.Forms.UserControl {
 				OnListChanged(EventArgs.Empty);
 			}
 		} catch (Exception err) {
-			Sphere10.Framework.Windows.Forms.SourceGrid.DevAgeControls.ErrorDialog.Show(this, err, "Error");
+			await Sphere10.Framework.Windows.Forms.SourceGrid.DevAgeControls.ErrorDialog.ShowAsync(this, err, "Error");
 		}
 	}
 

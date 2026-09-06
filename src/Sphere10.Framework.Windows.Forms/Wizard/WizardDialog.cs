@@ -47,13 +47,13 @@ public partial class WizardDialog<T> : FormEx {
 		base.Close();
 	}
 
-	protected override void OnFormClosing(FormClosingEventArgs e) {
+	protected override async void OnFormClosing(FormClosingEventArgs e) {
 		base.OnFormClosing(e);
 		if (!Closing) {
 			var closeValidation = WizardManager.CancelRequested();
 			e.Cancel = closeValidation.IsFailure;
 			if (e.Cancel) {
-				DialogEx.Show(this, SystemIconType.Error, closeValidation.ErrorMessages.ToParagraphCase(true), "Error");
+				await DialogEx.ShowAsync(this, SystemIconType.Error, closeValidation.ErrorMessages.ToParagraphCase(true), "Error");
 			}
 		}
 	}
@@ -68,7 +68,7 @@ public partial class WizardDialog<T> : FormEx {
 				await WizardManager.Previous();
 			}
 		} catch (Exception error) {
-			ExceptionDialog.Show(this, error);
+			await ExceptionDialog.ShowAsync(this, error);
 		}
 
 	}
@@ -79,7 +79,7 @@ public partial class WizardDialog<T> : FormEx {
 				await WizardManager.Next();
 			}
 		} catch (Exception error) {
-			ExceptionDialog.Show(this, error);
+			await ExceptionDialog.ShowAsync(this, error);
 		}
 
 	}

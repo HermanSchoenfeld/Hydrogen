@@ -62,12 +62,12 @@ public partial class LogonDialog : Form {
 							_errorRichTextBox.Lines = errors.ToArray();
 						}
 					} catch (Exception error) {
-						ExceptionDialog.Show(this, error);
+						await ExceptionDialog.ShowAsync(this, error);
 					}
 				}
 
 			} catch (Exception error) {
-				this.InvokeEx(() => ExceptionDialog.Show(this, error));
+				await ExceptionDialog.ShowAsync(this, error);
 				LogonResult = new AuthenticationResult {
 					ResultCode = AuthenticationErrorCode.ServerUnavailable,
 					UserObject = null
@@ -80,11 +80,12 @@ public partial class LogonDialog : Form {
 
 	#region Static Methods
 
-	public static AuthenticationResult Show(IWin32Window owner, string title, string text, Func<string, string, Task<AuthenticationResult>> authenticator) {
-		var dialog = new LogonDialog(title, text, authenticator);
+	/// <summary>Awaitably shows the logon dialog without blocking the calling context.</summary>
+	public static async Task<AuthenticationResult> ShowAsync(IWin32Window owner, string title, string text, Func<string, string, Task<AuthenticationResult>> authenticator) {
+		using var dialog = new LogonDialog(title, text, authenticator);
 		var startPosition = owner != null ? FormStartPosition.CenterParent : FormStartPosition.CenterScreen;
 		dialog.StartPosition = startPosition;
-		dialog.ShowDialog(owner);
+		await dialog.ShowDialogAsync(owner);
 		return dialog.LogonResult;
 	}
 
@@ -92,30 +93,30 @@ public partial class LogonDialog : Form {
 
 	#region Event Handlers
 
-	private void _okButton_Click(object sender, EventArgs e) {
+	private async void _okButton_Click(object sender, EventArgs e) {
 		try {
-			LogonAsync();
+			await LogonAsync();
 		} catch (Exception error) {
-			ExceptionDialog.Show(this, error);
+			await ExceptionDialog.ShowAsync(this, error);
 		}
 	}
 
-	private void _cancelButton_Click(object sender, EventArgs e) {
+	private async void _cancelButton_Click(object sender, EventArgs e) {
 		try {
 			LogonResult = new AuthenticationResult {
 				ResultCode = AuthenticationErrorCode.Aborted
 			};
 			Close();
 		} catch (Exception error) {
-			ExceptionDialog.Show(this, error);
+			await ExceptionDialog.ShowAsync(this, error);
 		}
 	}
 
-	private void _showPasswordCheckBox_CheckedChanged(object sender, EventArgs e) {
+	private async void _showPasswordCheckBox_CheckedChanged(object sender, EventArgs e) {
 		try {
 			_passwordTextBox.PasswordChar = _hidePasswordCheckBox.Checked ? '*' : (char)0;
 		} catch (Exception error) {
-			ExceptionDialog.Show(this, error);
+			await ExceptionDialog.ShowAsync(this, error);
 		}
 	}
 

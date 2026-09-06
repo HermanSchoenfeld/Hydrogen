@@ -5,6 +5,7 @@ These are project-level instructions for GitHub Copilot when working in the Sphe
 ## Workflow
 - **Never commit** unless explicitly asked to. See [Committing](#committing) for commit rules.
 - When writing code, understand the ambient code pattern at the method, class, and library level, then re-evaluate your intentions to ensure you achieve your goals and blend perfectly into the existing codebase.
+- Load the task-specific skill from [skills/](skills/README.md) before starting work (e.g. `skills/builder-pattern` for fluent builders, `skills/tools-namespace` for `Tools.*` utilities, `skills/winforms-ui` for screens/wizards, `skills/unit-testing` for tests). These instructions remain authoritative if a skill conflicts.
 - Use dictionary-based storage keyed by entity ID for graph/tree structures. For example, `FinalizedBlockChain` uses `Dictionary<TBlockID, PotentialHead>` for both all-nodes and potential-heads tracking, with `IEqualityComparer` overloads for custom ID types.
 
 ## Project Overview

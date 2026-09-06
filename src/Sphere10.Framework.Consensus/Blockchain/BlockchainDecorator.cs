@@ -8,6 +8,7 @@
 
 using System;
 using System.Collections.Generic;
+using Sphere10.Framework;
 
 namespace Sphere10.Framework.Consensus;
 
@@ -22,10 +23,11 @@ public abstract class BlockchainDecorator<TBlock, TState, TBlockID, TWeight, TOp
 	where TState : IBlockchainState
 	where TConcrete : IBlockchain<TBlock, TState, TBlockID, TWeight, TOperationID> {
 
-	internal TConcrete InternalBlockchain;
+	protected readonly TConcrete InternalBlockchain;
 
 	protected BlockchainDecorator(TConcrete internalBlockchain) {
-		InternalBlockchain = internalBlockchain ?? throw new ArgumentNullException(nameof(internalBlockchain));
+		Guard.ArgumentNotNull(internalBlockchain, nameof(internalBlockchain));
+		InternalBlockchain = internalBlockchain;
 	}
 
 	public event EventHandlerEx<LinkedBlock<TBlock, TState, TBlockID, TWeight, TOperationID>> BlockApplied {

@@ -132,7 +132,7 @@ public abstract class WizardBase<T> : SyncDisposable, IWizard<T> {
 		CheckStarted();
 		var validation = await _currentVisibleScreen.Validate();
 		if (validation.IsFailure) {
-			DialogEx.Show(_dialog, SystemIconType.Error, "Error", validation.ErrorMessages.ToParagraphCase(), "OK");
+			await DialogEx.ShowAsync(_dialog, SystemIconType.Error, "Error", validation.ErrorMessages.ToParagraphCase(), "OK");
 			return;
 		}
 		await _currentVisibleScreen.OnNext();
@@ -178,13 +178,13 @@ public abstract class WizardBase<T> : SyncDisposable, IWizard<T> {
 	protected async Task Complete() {
 		var validation = await Validate();
 		if (validation.IsFailure) {
-			DialogEx.Show(_dialog, SystemIconType.Error, "Error", validation.ErrorMessages.ToParagraphCase(), "OK");
+			await DialogEx.ShowAsync(_dialog, SystemIconType.Error, "Error", validation.ErrorMessages.ToParagraphCase(), "OK");
 			return;
 		}
 		;
 		var finishResult = await Finish();
 		if (finishResult.IsFailure) {
-			DialogEx.Show(_dialog, SystemIconType.Error, "Error", finishResult.ErrorMessages.ToParagraphCase(true), "OK");
+			await DialogEx.ShowAsync(_dialog, SystemIconType.Error, "Error", finishResult.ErrorMessages.ToParagraphCase(true), "OK");
 			WizardResult = WizardResult.Error;
 			return;
 		} else

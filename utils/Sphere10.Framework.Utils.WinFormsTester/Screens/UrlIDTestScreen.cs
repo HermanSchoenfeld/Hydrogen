@@ -24,7 +24,7 @@ public partial class UrlIDTestScreen : ApplicationScreen {
 			}
 
 		} catch (Exception error) {
-			ExceptionDialog.Show(error);
+			await ExceptionDialog.ShowAsync(error);
 		}
 	}
 }

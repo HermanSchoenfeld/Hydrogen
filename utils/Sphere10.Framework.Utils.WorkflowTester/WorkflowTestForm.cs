@@ -87,7 +87,7 @@ public partial class WorkflowTestForm : Form {
 			_knownWorkflowInstances.Add(workflowInstanceId);
 			await OutputWriter.WriteLineAsync($"New Workflow Instance: {workflowInstanceId}");
 		} catch (Exception error) {
-			ExceptionDialog.Show(error);
+			await ExceptionDialog.ShowAsync(error);
 		}
 	}
 
@@ -97,7 +97,7 @@ public partial class WorkflowTestForm : Form {
 			_knownWorkflowInstances.Add(workflowInstanceId);
 			await OutputWriter.WriteLineAsync($"New Workflow Instance: {workflowInstanceId}");
 		} catch (Exception error) {
-			ExceptionDialog.Show(error);
+			await ExceptionDialog.ShowAsync(error);
 		}
 	}
 
@@ -108,7 +108,7 @@ public partial class WorkflowTestForm : Form {
 			_knownWorkflowInstances.Add(workflowInstanceId);
 			await OutputWriter.WriteLineAsync($"New Workflow Instance: {workflowInstanceId}");
 		} catch (Exception error) {
-			ExceptionDialog.Show(error);
+			await ExceptionDialog.ShowAsync(error);
 		}
 	}
 
@@ -120,59 +120,61 @@ public partial class WorkflowTestForm : Form {
 				await PrintWorkflow(workflow);
 			}
 		} catch (Exception error) {
-			ExceptionDialog.Show(error);
+			await ExceptionDialog.ShowAsync(error);
 		}
 
 	}
 
-	private void _noErrorRadioButton_CheckedChanged(object sender, EventArgs e) {
+	private async void _noErrorRadioButton_CheckedChanged(object sender, EventArgs e) {
 		try {
 			SetErrorStep();
 		} catch (Exception error) {
-			ExceptionDialog.Show(error);
+			await ExceptionDialog.ShowAsync(error);
 		}
 	}
 
-	private void _step1RadioButton_CheckedChanged(object sender, EventArgs e) {
+	private async void _step1RadioButton_CheckedChanged(object sender, EventArgs e) {
 		try {
 			SetErrorStep();
 		} catch (Exception error) {
-			ExceptionDialog.Show(error);
+			await ExceptionDialog.ShowAsync(error);
 		}
 	}
 
-	private void _step2RadioButton_CheckedChanged(object sender, EventArgs e) {
+	private async void _step2RadioButton_CheckedChanged(object sender, EventArgs e) {
 		try {
 			SetErrorStep();
 		} catch (Exception error) {
-			ExceptionDialog.Show(error);
+			await ExceptionDialog.ShowAsync(error);
 		}
 
 	}
 
-	private void _step3RadioButton_CheckedChanged(object sender, EventArgs e) {
+	private async void _step3RadioButton_CheckedChanged(object sender, EventArgs e) {
 		try {
 			SetErrorStep();
 		} catch (Exception error) {
-			ExceptionDialog.Show(error);
+			await ExceptionDialog.ShowAsync(error);
 		}
 
 	}
 
-	private void _resumeWorkflow_Click(object sender, EventArgs e) {
+	private async void _resumeWorkflow_Click(object sender, EventArgs e) {
 		try {
-			EnterTextDialog.Show(this, "Resume Workflow", "Enter WorkflowID", out var workflowId);
-			_workflowHost.ResumeWorkflow(workflowId);
+			var (Accepted, workflowId) = await EnterTextDialog.ShowAsync(this, "Resume Workflow", "Enter WorkflowID");
+			if (!Accepted)
+				return;
+			await _workflowHost.ResumeWorkflow(workflowId);
 		} catch (Exception error) {
-			ExceptionDialog.Show(error);
+			await ExceptionDialog.ShowAsync(error);
 		}
 	}
 
-	private void _2SecDelayCheckbox_CheckedChanged(object sender, EventArgs e) {
+	private async void _2SecDelayCheckbox_CheckedChanged(object sender, EventArgs e) {
 		try {
 			Delay = _2SecDelayCheckbox.Checked;
 		} catch (Exception error) {
-			ExceptionDialog.Show(error);
+			await ExceptionDialog.ShowAsync(error);
 		}
 	}
 

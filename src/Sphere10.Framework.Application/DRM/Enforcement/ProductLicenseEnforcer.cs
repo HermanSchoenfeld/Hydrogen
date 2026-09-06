@@ -7,6 +7,7 @@
 // This notice must not be removed when duplicating this file or its contents, in whole or in part.
 
 using System;
+using System.Threading.Tasks;
 
 namespace Sphere10.Framework.Application;
 
@@ -124,31 +125,34 @@ public class ProductLicenseEnforcer : IProductLicenseEnforcer {
 		_settings?.Save();
 	}
 
-	public virtual void EnforceLicense(bool suppressNag) {
+	public virtual async Task EnforceLicense(bool suppressNag) {
+		bool nagged = false;
+		ProductRights rights;
+		string message;
 		lock (_lock) {
-			try {
-				var rights = CalculateRights(out var message);
-				var nagged = false;
-				if (rights.FeatureRights.IsIn(ProductLicenseFeatureLevelDTO.Free, ProductLicenseFeatureLevelDTO.None) && !string.IsNullOrWhiteSpace(message) && !suppressNag) {
-					// Show nag screen, allow user opportunity to add new license
-					UserInterfaceServices.ShowNagScreen(message);
-					nagged = true;
-					rights = CalculateRights(out message); // user may have updated license in nag screen
-				}
-
-				if (rights.FeatureRights == ProductLicenseFeatureLevelDTO.None) {
-					if (!nagged && !suppressNag)
-						UserInterfaceServices.ReportError("License Notification", message);
-					UserInterfaceServices.Exit(true);
-					return;
-				}
-
-				SaveSettings();
-			} catch (Exception error) {
-				HandleEnforcementError(error, false);
-			}
+			rights = CalculateRights(out message);
+			// Show nag screen OUTSIDE the lock (can't await inside lock)
 		}
-	}
+		try {
+			if (rights.FeatureRights.IsIn(ProductLicenseFeatureLevelDTO.Free, ProductLicenseFeatureLevelDTO.None) && !string.IsNullOrWhiteSpace(message) && !suppressNag) {
+				// Show nag screen, allow user opportunity to add new license
+				await UserInterfaceServices.ShowNagScreen(message);
+				nagged = true;
+				rights = CalculateRights(out message); // user may have updated license in nag screen
+			}
+
+			if (rights.FeatureRights == ProductLicenseFeatureLevelDTO.None) {
+				if (!nagged && !suppressNag)
+					UserInterfaceServices.ReportError("License Notification", message);
+				UserInterfaceServices.Exit(true);
+				return;
+			}
+
+						SaveSettings();
+					} catch (Exception error) {
+						HandleEnforcementError(error, false);
+					}
+				}
 
 	public virtual ProductRights CalculateRights(out string nagMessage) {
 		ProductLicenseStorage.TryGetActivatedLicense(out var activatedLicense);

@@ -309,7 +309,7 @@ public partial class BaseAppointmentBook : UserControl {
 
 	#region Mouse
 
-	protected virtual void OnCellMouseDown(int col, int row, MouseEventArgs mouseEvent) {
+	protected virtual async void OnCellMouseDown(int col, int row, MouseEventArgs mouseEvent) {
 		try {
 			switch (SelectState) {
 				case GridSelectingState.None:
@@ -328,11 +328,11 @@ public partial class BaseAppointmentBook : UserControl {
 			}
 		} catch (Exception error) {
 			SystemLog.Exception(error);
-			ExceptionDialog.Show(this, error);
+			await ExceptionDialog.ShowAsync(this, error);
 		}
 	}
 
-	protected virtual void OnCellMouseUp(int col, int row, MouseEventArgs mouseEvent) {
+	protected virtual async void OnCellMouseUp(int col, int row, MouseEventArgs mouseEvent) {
 		try {
 			const bool allowMultiColumnSelect = false;
 			switch (SelectState) {
@@ -357,11 +357,11 @@ public partial class BaseAppointmentBook : UserControl {
 
 		} catch (Exception error) {
 			SystemLog.Exception(error);
-			ExceptionDialog.Show(this, error);
+			await ExceptionDialog.ShowAsync(this, error);
 		}
 	}
 
-	protected virtual void OnCellMouseMoved(int col, int row, MouseEventArgs mouseEvent) {
+	protected virtual async void OnCellMouseMoved(int col, int row, MouseEventArgs mouseEvent) {
 		try {
 			const bool allowMultiColumnSelect = false;
 			switch (SelectState) {
@@ -384,7 +384,7 @@ public partial class BaseAppointmentBook : UserControl {
 			}
 		} catch (Exception error) {
 			SystemLog.Exception(error);
-			ExceptionDialog.Show(this, error);
+			await ExceptionDialog.ShowAsync(this, error);
 		}
 	}
 

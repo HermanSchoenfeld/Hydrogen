@@ -12,6 +12,10 @@ Sphere10.Framework.Application enables **rapid application development** by prov
 dotnet add package Sphere10.Framework.Application
 ```
 
+## Awaitable UI services
+
+`IUserInterfaceServices.ShowNagScreen`, `ShowSendCommentDialog`, `ShowSubmitBugReportDialog`, `ShowRequestFeatureDialog`, and `ShowAboutBox` return `Task`. Await them to preserve sequencing and observe errors. `IProductLicenseEnforcer.EnforceLicense(bool)` also returns `Task`, and completes after any licensing dialog closes. Implementations with no UI work return `Task.CompletedTask`.
+
 ## ⚡ Quick Start
 
 Here's a complete Windows Forms application using the framework (from [AutoMouse](https://github.com/HermanSchoenfeld/AutoMouse)):

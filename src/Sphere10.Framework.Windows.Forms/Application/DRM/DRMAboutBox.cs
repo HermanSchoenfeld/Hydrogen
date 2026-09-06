@@ -29,10 +29,10 @@ public partial class DRMAboutBox : ProductAboutBox {
 		_expirationControl.Text = nag;
 	}
 
-	private void _changeProductKeyButton_Click(object sender, EventArgs e) {
+	private async void _changeProductKeyButton_Click(object sender, EventArgs e) {
 		try {
-			DRMProductActivationForm form = new DRMProductActivationForm();
-			form.ShowDialog();
+			using var form = new DRMProductActivationForm();
+			await form.ShowDialogAsync(this);
 			SetLicenseMessage();
 		} catch (Exception error) {
 			var uiservices = Sphere10Framework.Instance.ServiceProvider.GetService<IUserInterfaceServices>();

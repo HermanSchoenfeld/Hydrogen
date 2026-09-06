@@ -107,17 +107,17 @@ public partial class PathSelectorControl : UserControlEx {
 
 	#region Event Handlers
 
-	private void _filenameTextBox_Enter(object sender, EventArgs e) {
+	private async void _filenameTextBox_Enter(object sender, EventArgs e) {
 		try {
 			if (_textOnEnter == null)
 				_textOnEnter = this._filenameTextBox.Text;
 		} catch (Exception error) {
 			SystemLog.Exception(error);
-			ExceptionDialog.Show(error);
+			await ExceptionDialog.ShowAsync(error);
 		}
 	}
 
-	private void _filenameTextBox_Validating(object sender, CancelEventArgs e) {
+	private async void _filenameTextBox_Validating(object sender, CancelEventArgs e) {
 		try {
 			var textOnLeave = _filenameTextBox.Text;
 			if (!string.IsNullOrEmpty(textOnLeave) && _textOnEnter != textOnLeave && ForcePathExists) {
@@ -136,19 +136,19 @@ public partial class PathSelectorControl : UserControlEx {
 			_textOnEnter = null;
 		} catch (Exception error) {
 			SystemLog.Exception(error);
-			ExceptionDialog.Show(error);
+			await ExceptionDialog.ShowAsync(error);
 		}
 	}
 
-	private void _filenameTextBox_Validated(object sender, EventArgs e) {
+	private async void _filenameTextBox_Validated(object sender, EventArgs e) {
 		try {
 		} catch (Exception error) {
 			SystemLog.Exception(error);
-			ExceptionDialog.Show(error);
+			await ExceptionDialog.ShowAsync(error);
 		}
 	}
 
-	private void _fileSelectorButton_Click(object sender, EventArgs e) {
+	private async void _fileSelectorButton_Click(object sender, EventArgs e) {
 		try {
 			switch (Mode) {
 				case PathSelectionMode.OpenFile:
@@ -166,18 +166,18 @@ public partial class PathSelectorControl : UserControlEx {
 			}
 		} catch (Exception error) {
 			SystemLog.Exception(error);
-			ExceptionDialog.Show(error);
+			await ExceptionDialog.ShowAsync(error);
 		}
 	}
 
-	protected override void OnEnabledChanged(EventArgs e) {
+	protected override async void OnEnabledChanged(EventArgs e) {
 		try {
 			base.OnEnabledChanged(e);
 			_filenameTextBox.Enabled =
 				_fileSelectorButton.Enabled = this.Enabled;
 		} catch (Exception error) {
 			SystemLog.Exception(error);
-			ExceptionDialog.Show(error);
+			await ExceptionDialog.ShowAsync(error);
 		}
 	}
 

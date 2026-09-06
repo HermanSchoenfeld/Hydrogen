@@ -7,6 +7,7 @@
 // This notice must not be removed when duplicating this file or its contents, in whole or in part.
 
 using System;
+using System.Threading.Tasks;
 using System.ComponentModel;
 using Sphere10.Framework.Windows.Forms.SourceGrid.Cells;
 using Sphere10.Framework.Windows.Forms.SourceGrid.Selection;
@@ -298,7 +299,7 @@ public class PingGrid : GridVirtual {
 	private string mDeleteQuestionMessage = "Are you sure to delete all the selected rows?";
 
 	/// <summary>
-	/// Message showed with the DeleteSelectedRows method. Set to null to not show any message.
+	/// Message showed with the DeleteSelectedRowsAsync method. Set to null to not show any message.
 	/// </summary>
 	public string DeleteQuestionMessage {
 		get { return mDeleteQuestionMessage; }
@@ -310,9 +311,9 @@ public class PingGrid : GridVirtual {
 	/// </summary>
 	/// <returns>Returns true if one or more row is deleted otherwise false.</returns>
 	[Obsolete]
-	public virtual bool DeleteSelectedRows() {
+	public virtual async Task<bool> DeleteSelectedRowsAsync() {
 		if (string.IsNullOrEmpty(mDeleteQuestionMessage) ||
-		    DialogEx.Show(this, SystemIconType.Question, mDeleteQuestionMessage, System.Windows.Forms.Application.ProductName, System.Windows.Forms.MessageBoxButtons.YesNo, System.Windows.Forms.MessageBoxIcon.Question) ==
+		    await DialogEx.ShowAsync(this, SystemIconType.Question, mDeleteQuestionMessage, System.Windows.Forms.Application.ProductName, System.Windows.Forms.MessageBoxButtons.YesNo, System.Windows.Forms.MessageBoxIcon.Question) ==
 		    System.Windows.Forms.DialogResult.Yes) {
 			foreach (int gridRow in Selection.GetSelectionRegion().GetRowsIndex()) {
 				int dataIndex = Rows.IndexToDataSourceIndex(gridRow);

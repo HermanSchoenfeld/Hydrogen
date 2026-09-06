@@ -105,7 +105,7 @@ public partial class FormEx : Form, IUpdatable {
 		return new UpdateScope(this, behaviour);
 	}
 
-	protected override void OnLoad(EventArgs e) {
+	protected override async void OnLoad(EventArgs e) {
 		try {
 			base.OnLoad(e);
 			if (Loaded || DesignMode || Tools.Runtime.IsDesignMode)
@@ -117,7 +117,7 @@ public partial class FormEx : Form, IUpdatable {
 			}
 			Loaded = true;
 		} catch (Exception error) {
-			ExceptionDialog.Show(error);
+			await ExceptionDialog.ShowAsync(this, error);
 		}
 	}
 

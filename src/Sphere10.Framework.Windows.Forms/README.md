@@ -12,6 +12,28 @@ Sphere10.Framework.Windows.Forms enables **rapid Windows desktop application dev
 dotnet add package Sphere10.Framework.Windows.Forms
 ```
 
+## Async modal dialogs (.NET 10)
+
+Await modal operations from UI event handlers or methods returning `Task`:
+
+```csharp
+private async void EditButton_Click(object Sender, EventArgs Args) {
+	var (Accepted, UserInput) = await EnterTextDialog.ShowAsync(this, "Edit name", "Name", "Current name");
+	if (Accepted)
+		await DialogEx.ShowAsync(this, SystemIconType.Information, "Saved", UserInput, "OK");
+}
+```
+
+Use `ShowAsync` on `DialogEx`, `ExceptionDialog`, `EnterTextDialog`, `PasswordDialog`, `LogonDialog`, and `CrudDialog`; use `GenericEditorForm.ShowFormAsync` and `QuestionDialogSession.AskQuestionAsync`. Password input returns `(DialogResult Result, string Password)`; text input returns `(bool Accepted, string UserInput)`. These helpers dispose the dialogs they create after completion. When calling native `Form.ShowDialogAsync` on your own form, keep it in a `using` scope across the `await`.
+
+`parent.ShowDialogAsync<TForm>()` creates, shows, and disposes a form on the parent's UI thread. `InvokeAsyncEx` supports callbacks returning `Task` or `Task<T>` through native `Control.InvokeAsync`, propagating completion, exceptions, and cancellation. The generic modal helper's cancellation token controls dispatch; it does not cancel an already displayed dialog.
+
+`IApplicationDialog.ShowDialogAsync` uses the native form API when available and posts legacy interface implementations to the UI context. The caller retains ownership of an existing dialog. CRUD create, edit, and delete methods now return `Task`; SourceGrid deletion uses `DeleteSelectedRowsAsync`. Custom `DialogEx` button behavior overrides `OnProcessButtonAsync`.
+
+WinForms closing and validation events still require cancellation and handled flags to be set before the first `await`. Synchronous grid queries and model construction can only schedule asynchronous error reporting; they cannot await a modal result. `IWindowsFormsEditorService.ShowDialog`, common file/folder/color dialogs, and the synchronous `LiteMainForm.AskYN` contract retain synchronous modal calls. `AskYN` uses a native message box; blocking `ShowDialogAsync` with `.Result` or `.GetAwaiter().GetResult()` on the UI thread would deadlock.
+
+Run the STA regression tests with `dotnet test tests/Sphere10.Framework.Windows.Forms.Tests/Sphere10.Framework.Windows.Forms.Tests.csproj` on Windows. They exercise actual forms with a message loop and close their dialogs automatically.
+
 ## ⚡ 10-Second Example
 
 ```csharp

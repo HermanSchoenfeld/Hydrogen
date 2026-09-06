@@ -260,7 +260,7 @@ public partial class CrudGrid : UserControl, ICrudGrid {
 		_entityEditorType = entityEditorType;
 	}
 
-	public virtual async void CreateNewRecord() {
+	public virtual async Task CreateNewRecord() {
 		var newEntity = _dataSource.New();
 		if (await ShowEntityEditor(newEntity, true) == CrudAction.Create) {
 			await RefreshGrid();
@@ -270,20 +270,20 @@ public partial class CrudGrid : UserControl, ICrudGrid {
 		}
 	}
 
-	public virtual void DeleteSelectedRecord() {
+	public virtual async Task DeleteSelectedRecord() {
 		if (_selectedEntity == null)
 			return;
-		DeleteEntity(_selectedEntity);
+		await DeleteEntity(_selectedEntity);
 	}
 
-	public virtual void EditSelectedEntity() {
+	public virtual async Task EditSelectedEntity() {
 		if (_selectedEntity == null)
 			return;
-		EditEntity(_selectedEntity);
+		await EditEntity(_selectedEntity);
 	}
 
-	public virtual async void DeleteEntity(object entity) {
-		if (DialogEx.Show(this, SystemIconType.Question, "Confirm Delete", "Are you sure you want to delete this record?", "&No", "&Yes") == DialogExResult.Button2) {
+	public virtual async Task DeleteEntity(object entity) {
+		if (await DialogEx.ShowAsync(this, SystemIconType.Question, "Confirm Delete", "Are you sure you want to delete this record?", "&No", "&Yes") == DialogExResult.Button2) {
 			using (EnterVisualState(VisualState.Loading))
 			using (LoadingCircle.EnterAnimationScope(this._gridContainerPanel, 1.0f, LoadingCircle.StylePresets.MacOSX)) {
 				var deleteValidationResult = await _dataSource.ValidateAsync(entity, CrudAction.Delete);
@@ -291,14 +291,14 @@ public partial class CrudGrid : UserControl, ICrudGrid {
 					await _dataSource.DeleteAsync(entity);
 					await UpdateGridAfterDelete(entity);
 				} else {
-					DialogEx.Show(this, SystemIconType.Shield, "Validation Error", deleteValidationResult.ErrorMessages.ToParagraphCase(), "OK");
+					await DialogEx.ShowAsync(this, SystemIconType.Shield, "Validation Error", deleteValidationResult.ErrorMessages.ToParagraphCase(), "OK");
 				}
 			}
 		}
 	}
 
-	public virtual async void EditEntity(object entity) {
-		switch (await ShowEntityEditor(_selectedEntity, false)) {
+	public virtual async Task EditEntity(object entity) {
+		switch (await ShowEntityEditor(entity, false)) {
 			case CrudAction.Update:
 				await RefreshGrid();
 				RaiseEntityUpdatedEvent(entity);
@@ -328,12 +328,12 @@ public partial class CrudGrid : UserControl, ICrudGrid {
 	}
 
 	private async Task<CrudAction?> ShowEntityEditor(object entity, bool isNewEntity) {
-		var entityEditorDialog = new CrudEntityEditorDialog();
+		using var entityEditorDialog = new CrudEntityEditorDialog();
 		var entityEditor = Tools.Object.Create(_entityEditorType);
 		_entityEditorAdapter.SetAdaptee(entityEditor);
 		_entityEditorAdapter.PropertyChanged += RaiseEntityEditingEvent;
 		entityEditorDialog.SetEntityEditor(_dataSource, _entityEditorAdapter, _crudCapabilities, entity, isNewEntity);
-		entityEditorDialog.ShowDialog(this);
+		await entityEditorDialog.ShowDialogAsync(this);
 		return entityEditorDialog.UserAction;
 	}
 
@@ -436,7 +436,7 @@ public partial class CrudGrid : UserControl, ICrudGrid {
 		_pageNumberBox.Text = (number + 1).ToString();
 	}
 
-	internal async void NotifyEntityUpdated(object entity) {
+	internal async Task NotifyEntityUpdated(object entity) {
 		if (_entityToRowLookup.Contains(entity))
 			await UpdateGridAfterEdit(entity);
 	}
@@ -704,10 +704,10 @@ public partial class CrudGrid : UserControl, ICrudGrid {
 		var editor = new SourceGrid.Cells.Editors.DropDownList(columnBinding.DataType, columnBinding.DropDownItemDisplayMember);
 		editor.Control.ValueMember = columnBinding.DropDownItemDisplayMember;
 		editor.Control.DisplayMember = columnBinding.DropDownItemDisplayMember;
-		editor.EditException += (o, e) => {
-			ExceptionDialog.Show(this, e.Exception);
+		editor.EditException += async (o, e) => {
 			e.Handled = true;
 			editor.UndoEditValue();
+			await ExceptionDialog.ShowAsync(this, e.Exception);
 		};
 		var cell = new Cell(columnBinding.DataType, editor);
 		editor.Control.DropDownStyle = ComboBoxStyle.DropDownList;
@@ -722,7 +722,7 @@ public partial class CrudGrid : UserControl, ICrudGrid {
 
 	private Cell CreateCommandCell(ICrudGridColumn columnBinding, object entity, CrudAction action) {
 		System.Drawing.Image image;
-		Action<object> callback;
+		Func<object, Task> callback;
 		switch (action) {
 			case CrudAction.Update:
 				image = Resources.SmallEditIcon;
@@ -736,7 +736,13 @@ public partial class CrudGrid : UserControl, ICrudGrid {
 			default:
 				throw new ArgumentException(string.Format("Invalid command '{0}'", action), "action");
 		}
-		return CreateButtonCell(columnBinding, entity, string.Empty, image, callback);
+		return CreateButtonCell(columnBinding, entity, string.Empty, image, async Entity => {
+			try {
+				await callback(Entity);
+			} catch (Exception Error) {
+				await ExceptionDialog.ShowAsync(this, Error);
+			}
+		});
 	}
 
 	private Cell CreateButtonCell(ICrudGridColumn columnBinding, object entity, string caption, System.Drawing.Image image, Action<object> clickHandler) {
@@ -842,7 +848,7 @@ public partial class CrudGrid : UserControl, ICrudGrid {
 				await RefreshGrid();
 			}
 		} catch (Exception error) {
-			ExceptionDialog.Show(this, error);
+			await ExceptionDialog.ShowAsync(this, error);
 		}
 	}
 
@@ -858,7 +864,7 @@ public partial class CrudGrid : UserControl, ICrudGrid {
 			_sortColumnName = _columnsBindings[_sortColumnIndex].SortName;
 			await RefreshGrid();
 		} catch (Exception error) {
-			ExceptionDialog.Show(this, error);
+			await ExceptionDialog.ShowAsync(this, error);
 		}
 	}
 
@@ -867,7 +873,7 @@ public partial class CrudGrid : UserControl, ICrudGrid {
 			_pageSize = (int)_pageSizeUpDown.Value;
 			await RefreshGrid();
 		} catch (Exception error) {
-			ExceptionDialog.Show(this, error);
+			await ExceptionDialog.ShowAsync(this, error);
 		}
 	}
 
@@ -879,51 +885,51 @@ public partial class CrudGrid : UserControl, ICrudGrid {
 			else
 				await RefreshGrid();
 		} catch (Exception error) {
-			ExceptionDialog.Show(this, error);
+			await ExceptionDialog.ShowAsync(this, error);
 		}
 	}
 
-	private void _firstPageButton_Click(object sender, EventArgs e) {
+	private async void _firstPageButton_Click(object sender, EventArgs e) {
 		try {
 			if (State != VisualState.Normal)
 				return;
 
 			SetVisiblePageNumberText(0);
 		} catch (Exception error) {
-			ExceptionDialog.Show(this, error);
+			await ExceptionDialog.ShowAsync(this, error);
 		}
 	}
 
-	private void _previousPageButton_Click(object sender, EventArgs e) {
+	private async void _previousPageButton_Click(object sender, EventArgs e) {
 		try {
 			if (State != VisualState.Normal)
 				return;
 
 			SetVisiblePageNumberText((_pageNumber - 1).ClipTo(0, _endPageNumber));
 		} catch (Exception error) {
-			ExceptionDialog.Show(this, error);
+			await ExceptionDialog.ShowAsync(this, error);
 		}
 	}
 
-	private void _nextPageButton_Click(object sender, EventArgs e) {
+	private async void _nextPageButton_Click(object sender, EventArgs e) {
 		try {
 			if (State != VisualState.Normal)
 				return;
 
 			SetVisiblePageNumberText((_pageNumber + 1).ClipTo(0, _endPageNumber));
 		} catch (Exception error) {
-			ExceptionDialog.Show(this, error);
+			await ExceptionDialog.ShowAsync(this, error);
 		}
 	}
 
-	private void _lastPageButton_Click(object sender, EventArgs e) {
+	private async void _lastPageButton_Click(object sender, EventArgs e) {
 		try {
 			if (State != VisualState.Normal)
 				return;
 
 			SetVisiblePageNumberText(_endPageNumber);
 		} catch (Exception error) {
-			ExceptionDialog.Show(this, error);
+			await ExceptionDialog.ShowAsync(this, error);
 		}
 	}
 
@@ -935,33 +941,33 @@ public partial class CrudGrid : UserControl, ICrudGrid {
 			_pageNumber = GetVisiblePageNumberText();
 			await RefreshGrid();
 		} catch (Exception error) {
-			ExceptionDialog.Show(this, error);
+			await ExceptionDialog.ShowAsync(this, error);
 		}
 	}
 
-	private void _createButton_Click(object sender, EventArgs e) {
+	private async void _createButton_Click(object sender, EventArgs e) {
 		try {
 			if (State != VisualState.Normal)
 				return;
 
-			CreateNewRecord();
+			await CreateNewRecord();
 		} catch (Exception error) {
-			ExceptionDialog.Show(this, error);
+			await ExceptionDialog.ShowAsync(this, error);
 		}
 	}
 
-	private void _deleteButton_Click(object sender, EventArgs e) {
+	private async void _deleteButton_Click(object sender, EventArgs e) {
 		try {
 			if (State != VisualState.Normal)
 				return;
 
-			DeleteSelectedRecord();
+			await DeleteSelectedRecord();
 		} catch (Exception error) {
-			ExceptionDialog.Show(this, error);
+			await ExceptionDialog.ShowAsync(this, error);
 		}
 	}
 
-	private void _grid_Selection_SelectionChanged(object sender, SourceGrid.RangeRegionChangedEventArgs e) {
+	private async void _grid_Selection_SelectionChanged(object sender, SourceGrid.RangeRegionChangedEventArgs e) {
 		try {
 			if (State != VisualState.Normal)
 				return;
@@ -980,27 +986,27 @@ public partial class CrudGrid : UserControl, ICrudGrid {
 				}
 			}
 		} catch (Exception error) {
-			ExceptionDialog.Show(this, error);
+			await ExceptionDialog.ShowAsync(this, error);
 		}
 	}
 
-	private void _grid_Selection_CellGotFocus(SourceGrid.Selection.SelectionBase sender, SourceGrid.ChangeActivePositionEventArgs e) {
+	private async void _grid_Selection_CellGotFocus(SourceGrid.Selection.SelectionBase sender, SourceGrid.ChangeActivePositionEventArgs e) {
 		try {
 		} catch (Exception error) {
-			ExceptionDialog.Show(this, error);
+			await ExceptionDialog.ShowAsync(this, error);
 		}
 	}
 
-	private void _grid_MouseDoubleClick(object sender, MouseEventArgs e) {
+	private async void _grid_MouseDoubleClick(object sender, MouseEventArgs e) {
 		try {
 			if (!LeftClickToDeselect)
-				EditSelectedEntity();
+				await EditSelectedEntity();
 		} catch (Exception error) {
-			ExceptionDialog.Show(this, error);
+			await ExceptionDialog.ShowAsync(this, error);
 		}
 	}
 
-	private void _grid_MouseClick(object sender, MouseEventArgs e) {
+	private async void _grid_MouseClick(object sender, MouseEventArgs e) {
 		try {
 			switch (e.Button) {
 				case MouseButtons.Left:
@@ -1021,31 +1027,31 @@ public partial class CrudGrid : UserControl, ICrudGrid {
 					break;
 			}
 		} catch (Exception error) {
-			ExceptionDialog.Show(this, error);
+			await ExceptionDialog.ShowAsync(this, error);
 		}
 	}
 
-	private void _deselectToolStripMenuItem_Click(object sender, EventArgs e) {
+	private async void _deselectToolStripMenuItem_Click(object sender, EventArgs e) {
 		try {
 			_grid.Selection.ResetSelection(false);
 		} catch (Exception error) {
-			ExceptionDialog.Show(this, error);
+			await ExceptionDialog.ShowAsync(this, error);
 		}
 	}
 
-	private void _editToolStripMenuItem_Click(object sender, EventArgs e) {
+	private async void _editToolStripMenuItem_Click(object sender, EventArgs e) {
 		try {
-			EditSelectedEntity();
+			await EditSelectedEntity();
 		} catch (Exception error) {
-			ExceptionDialog.Show(this, error);
+			await ExceptionDialog.ShowAsync(this, error);
 		}
 	}
 
-	private void _deleteToolStripMenuItem_Click(object sender, EventArgs e) {
+	private async void _deleteToolStripMenuItem_Click(object sender, EventArgs e) {
 		try {
-			DeleteSelectedRecord();
+			await DeleteSelectedRecord();
 		} catch (Exception error) {
-			ExceptionDialog.Show(this, error);
+			await ExceptionDialog.ShowAsync(this, error);
 		}
 	}
 

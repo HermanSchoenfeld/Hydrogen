@@ -16,35 +16,35 @@ public partial class PathSelectorTestScreen : ApplicationScreen {
 		InitializeComponent();
 	}
 
-	private void pathSelectorControl1_PathChanged() {
+	private async void pathSelectorControl1_PathChanged() {
 		try {
-			DialogEx.Show(this, SystemIconType.None, "Result", pathSelectorControl1.Path, "OK");
+			await DialogEx.ShowAsync(this, SystemIconType.None, "Result", pathSelectorControl1.Path, "OK");
 		} catch (Exception error) {
-			ExceptionDialog.Show(this, error);
+			await ExceptionDialog.ShowAsync(this, error);
 		}
 	}
 
-	private void pathSelectorControl2_PathChanged() {
+	private async void pathSelectorControl2_PathChanged() {
 		try {
-			DialogEx.Show(this, SystemIconType.None, "Result", pathSelectorControl2.Path, "OK");
+			await DialogEx.ShowAsync(this, SystemIconType.None, "Result", pathSelectorControl2.Path, "OK");
 		} catch (Exception error) {
-			ExceptionDialog.Show(this, error);
+			await ExceptionDialog.ShowAsync(this, error);
 		}
 	}
 
-	private void pathSelectorControl3_PathChanged() {
+	private async void pathSelectorControl3_PathChanged() {
 		try {
-			DialogEx.Show(this, SystemIconType.None, "Result", pathSelectorControl3.Path, "OK");
+			await DialogEx.ShowAsync(this, SystemIconType.None, "Result", pathSelectorControl3.Path, "OK");
 		} catch (Exception error) {
-			ExceptionDialog.Show(this, error);
+			await ExceptionDialog.ShowAsync(this, error);
 		}
 	}
 
-	private void pathSelectorControl4_PathChanged() {
+	private async void pathSelectorControl4_PathChanged() {
 		try {
-			DialogEx.Show(this, SystemIconType.None, "Result", pathSelectorControl4.Path, "OK");
+			await DialogEx.ShowAsync(this, SystemIconType.None, "Result", pathSelectorControl4.Path, "OK");
 		} catch (Exception error) {
-			ExceptionDialog.Show(this, error);
+			await ExceptionDialog.ShowAsync(this, error);
 		}
 	}
 

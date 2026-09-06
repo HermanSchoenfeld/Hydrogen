@@ -458,7 +458,7 @@ public partial class MiscTestScreen : ApplicationScreen {
 			var x = new XmlDeepDeserializer();
 			x.Deserialize(new StringReader(xxx));
 		} catch (Exception error) {
-			ExceptionDialog.Show(this, error);
+			await ExceptionDialog.ShowAsync(this, error);
 		}
 	}
 
@@ -469,7 +469,7 @@ public partial class MiscTestScreen : ApplicationScreen {
 			foreach (var macAddr in Tools.Network.GetMacAddresses())
 				await writer.WriteLineAsync(macAddr);
 		} catch (Exception error) {
-			ExceptionDialog.Show(this, error);
+			await ExceptionDialog.ShowAsync(this, error);
 		}
 	}
 
@@ -635,7 +635,7 @@ public partial class MiscTestScreen : ApplicationScreen {
 		}
 	}
 
-	private void _mappingTests_Click(object sender, EventArgs e) {
+	private async void _mappingTests_Click(object sender, EventArgs e) {
 		try {
 
 			var _writer = new TextBoxWriter(_outputTextBox);
@@ -645,7 +645,7 @@ public partial class MiscTestScreen : ApplicationScreen {
 
 			_writer.WriteLine(member);
 		} catch (Exception error) {
-			ExceptionDialog.Show(this, error);
+			await ExceptionDialog.ShowAsync(this, error);
 		}
 	}
 }

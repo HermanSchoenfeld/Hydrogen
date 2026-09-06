@@ -1,7 +1,7 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<TargetFramework>net8.0</TargetFramework>
+		<TargetFramework>net10.0</TargetFramework>
 		<IsPackable>true</IsPackable>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
 		<Description>NHibernate ORM integration for Sphere10.Framework.Data. Provides configuration and integration helpers for using NHibernate alongside the framework's data abstractions and utilities.</Description>
@@ -13,8 +13,8 @@
 		<None Include="README.md" Pack="true" PackagePath="\" />
 	</ItemGroup>
 	<ItemGroup>
-		<PackageReference Include="FluentNHibernate" Version="3.4.1" />
-		<PackageReference Include="NHibernate" Version="5.7.0" />
+		<PackageReference Include="FluentNHibernate" />
+		<PackageReference Include="NHibernate" />
 	</ItemGroup>
 
 	<ItemGroup>

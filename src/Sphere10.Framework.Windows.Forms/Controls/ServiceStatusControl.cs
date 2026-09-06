@@ -130,7 +130,7 @@ public partial class ServiceStatusControl : UserControlEx {
 				this.InvokeEx(() => Status = newStatus);
 			}
 		} catch (Exception error) {
-			ExceptionDialog.Show(this, error);
+			_ = ExceptionDialog.ShowAsync(this, error);
 		}
 	}
 

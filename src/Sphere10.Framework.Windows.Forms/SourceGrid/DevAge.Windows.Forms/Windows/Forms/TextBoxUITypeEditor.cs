@@ -71,7 +71,7 @@ public class TextBoxUITypeEditor : DevAgeTextBoxButton, IServiceProvider, System
 
 			OnDialogClosed(EventArgs.Empty);
 		} catch (Exception err) {
-			ExceptionDialog.Show(err);
+			_ = ExceptionDialog.ShowAsync(null, err);
 		}
 	}
 
@@ -134,7 +134,12 @@ public class TextBoxUITypeEditor : DevAgeTextBoxButton, IServiceProvider, System
 	}
 
 	public virtual System.Windows.Forms.DialogResult ShowDialog(System.Windows.Forms.Form dialog) {
+		// IWindowsFormsEditorService member — sync contract required by the interface.
 		return dialog.ShowDialog(this);
+	}
+
+	public virtual async System.Threading.Tasks.Task<System.Windows.Forms.DialogResult> ShowDialogAsync(System.Windows.Forms.Form dialog) {
+		return await dialog.ShowDialogAsync(this);
 	}
 
 	#endregion

@@ -7,6 +7,7 @@
 // This notice must not be removed when duplicating this file or its contents, in whole or in part.
 
 using System;
+using System.Threading.Tasks;
 
 namespace Sphere10.Framework.Application;
 
@@ -35,7 +36,7 @@ public class ProductLicenseEnforcerWithDisplay : IProductLicenseEnforcer {
 
 	public void ClearDrmServerErrors() => _internalEnforcer.ClearDrmServerErrors();
 
-	public void EnforceLicense(bool suppressNag)
+	public Task EnforceLicense(bool suppressNag)
 		=> _internalEnforcer.EnforceLicense(suppressNag);
 
 	public ProductRights CalculateRights(out string nagMessage)

@@ -59,12 +59,12 @@ public partial class ObjectSpaceScreen : ApplicationScreen {
 		_objectSpacePathControl.Path = _settings.FilePath;
 	}
 
-	private void _buildButton_Click(object sender, EventArgs e) {
+	private async void _buildButton_Click(object sender, EventArgs e) {
 		try {
 			SaveSettings();
 			DoConsensusSpaceDemo(_objectSpacePathControl.Path);
 		} catch (Exception ex) {
-			ExceptionDialog.Show(ex);
+			await ExceptionDialog.ShowAsync(ex);
 		}
 	}
 

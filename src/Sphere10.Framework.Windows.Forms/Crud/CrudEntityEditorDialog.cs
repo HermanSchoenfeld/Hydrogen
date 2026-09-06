@@ -21,6 +21,8 @@ public partial class CrudEntityEditorDialog : Form {
 	private DataSourceCapabilities _capabilities;
 	private bool _isNewEntity;
 	private object? _entity;
+	private bool _confirmingClose;
+	private bool _closeConfirmed;
 
 	public CrudEntityEditorDialog() {
 		InitializeComponent();
@@ -86,7 +88,7 @@ public partial class CrudEntityEditorDialog : Form {
 	}
 
 	public async Task<bool> DeleteEntity() {
-		if (DialogEx.Show(this, SystemIconType.Question, "Confirm Delete", "Are you sure you want to delete this record?", "&No", "&Yes") == DialogExResult.Button2) {
+		if (await DialogEx.ShowAsync(this, SystemIconType.Question, "Confirm Delete", "Are you sure you want to delete this record?", "&No", "&Yes") == DialogExResult.Button2) {
 			if (HasChanges)
 				CancelChanges();
 			if (await Validate(CrudAction.Delete)) {
@@ -122,21 +124,27 @@ public partial class CrudEntityEditorDialog : Form {
 
 	#region Event Handler
 
-	private void EntityEditorDialog_FormClosing(object sender, FormClosingEventArgs e) {
+	private async void EntityEditorDialog_FormClosing(object sender, FormClosingEventArgs e) {
+		if (_closeConfirmed || !HasChanges)
+			return;
+
+		// Cancel synchronously; WinForms does not wait for an asynchronous closing handler.
+		e.Cancel = true;
+		if (_confirmingClose)
+			return;
+		_confirmingClose = true;
+		using var ConfirmationScope = Tools.Scope.ExecuteOnDispose(() => _confirmingClose = false);
 		try {
-			if (HasChanges) {
-				switch (DialogEx.Show(SystemIconType.Question, "Close", "Are you sure you want to cancel your changes?", "&No", "&Yes")) {
-					case DialogExResult.Button1:
-						e.Cancel = true;
-						break;
-					case DialogExResult.Button2:
-						CancelChanges();
-						e.Cancel = false;
-						break;
-				}
-			}
+			// Leave the closing callback before constructing another modal form.
+			await Task.Yield();
+			if (await DialogEx.ShowAsync(this, SystemIconType.Question, "Close", "Are you sure you want to cancel your changes?", "&No", "&Yes") != DialogExResult.Button2)
+				return;
+			CancelChanges();
+			_closeConfirmed = true;
+			Close();
 		} catch (Exception error) {
-			ExceptionDialog.Show(this, error);
+			_closeConfirmed = false;
+			await ExceptionDialog.ShowAsync(this, error);
 		}
 	}
 
@@ -145,7 +153,7 @@ public partial class CrudEntityEditorDialog : Form {
 			if (await DeleteEntity())
 				Close();
 		} catch (Exception error) {
-			ExceptionDialog.Show(this, error);
+			await ExceptionDialog.ShowAsync(this, error);
 		}
 
 	}
@@ -155,17 +163,17 @@ public partial class CrudEntityEditorDialog : Form {
 			if (!HasChanges || await SaveChanges())
 				Close();
 		} catch (Exception error) {
-			ExceptionDialog.Show(this, error);
+			await ExceptionDialog.ShowAsync(this, error);
 		}
 
 	}
 
-	private void _cancelButton_Click(object sender, EventArgs e) {
+	private async void _cancelButton_Click(object sender, EventArgs e) {
 		try {
 			CancelChanges();
 			Close();
 		} catch (Exception error) {
-			ExceptionDialog.Show(this, error);
+			await ExceptionDialog.ShowAsync(this, error);
 		}
 
 	}

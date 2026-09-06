@@ -178,8 +178,8 @@ public partial class DesignerForm : Form {
 		);
 	}
 
-	private void _exportButton_Click(object sender, EventArgs e) {
-		ExportForm.ShowDialog(
+	private async void _exportButton_Click(object sender, EventArgs e) {
+		await ExportForm.ShowDialogAsync(
 			this,
 			Tools.Xml.WriteToString(
 				FromSettings((ExplorerBarSettings)_propertyGrid.SelectedObject)

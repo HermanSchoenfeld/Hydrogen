@@ -77,11 +77,11 @@ public class PadLockButton : Button {
 			PadLockStateChanged(this, _lockState);
 	}
 
-	private void PadLockButton_Click(object sender, EventArgs e) {
+	private async void PadLockButton_Click(object sender, EventArgs e) {
 		try {
 			ToggleLockState();
 		} catch (Exception error) {
-			ExceptionDialog.Show(this, error);
+			await ExceptionDialog.ShowAsync(this, error);
 		}
 	}
 

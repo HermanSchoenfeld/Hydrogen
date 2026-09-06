@@ -2,12 +2,13 @@
   
   <PropertyGroup>
     <OutputType>Library</OutputType>
-    <TargetFramework>net8.0-windows</TargetFramework>
+    <TargetFramework>net10.0-windows</TargetFramework>
     <IsPackable>true</IsPackable>
 	<PackageReadmeFile>README.md</PackageReadmeFile>
 	<Description>Windows Forms integration for Sphere10.Framework.Data.Oracle. Provides desktop UI helpers and components intended to work with Sphere10 Framework WinForms and the Oracle provider for data-driven applications.</Description>
     <PackageTags>sphere10 framework winforms oracle database</PackageTags>
     <UseWindowsForms>true</UseWindowsForms>
+		<NoWarn>$(NoWarn);WFO1000</NoWarn>
     <ForceDesignerDpiUnaware>true</ForceDesignerDpiUnaware>
     <LangVersion>latest</LangVersion>
   </PropertyGroup>

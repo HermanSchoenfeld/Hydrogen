@@ -19,7 +19,7 @@ public partial class TextAreaTestsScreen : ApplicationScreen {
 	public TextAreaTestsScreen() {
 		InitializeComponent();
 	}
-	private void _fillStandardButton_Click(object sender, EventArgs e) {
+	private async void _fillStandardButton_Click(object sender, EventArgs e) {
 		try {
 			_standardTextBox.Clear();
 			var start = DateTime.Now;
@@ -29,9 +29,9 @@ public partial class TextAreaTestsScreen : ApplicationScreen {
 				genSize += randomString.Length * sizeof(char);
 				_standardTextBox.AppendText(randomString);
 			}
-			DialogEx.Show(this, SystemIconType.Information, "Results", "{0} bytes took {1} seconds".FormatWith(genSize, DateTime.Now.Subtract(start).TotalSeconds));
+			await DialogEx.ShowAsync(this, SystemIconType.Information, "Results", "{0} bytes took {1} seconds".FormatWith(genSize, DateTime.Now.Subtract(start).TotalSeconds));
 		} catch (Exception error) {
-			ExceptionDialog.Show(error);
+			await ExceptionDialog.ShowAsync(error);
 		}
 	}
 
@@ -149,7 +149,7 @@ public partial class TextAreaTestsScreen : ApplicationScreen {
 		_standardTextBox.AppendText(sb.ToString());
 	}
 
-	private void _genOnlyButton_Click(object sender, EventArgs e) {
+	private async void _genOnlyButton_Click(object sender, EventArgs e) {
 		try {
 			_standardTextBox.Clear();
 			var start = DateTime.Now;
@@ -158,13 +158,13 @@ public partial class TextAreaTestsScreen : ApplicationScreen {
 				var randomString = Tools.Text.GenerateRandomString(50) + Environment.NewLine;
 				genSize += randomString.Length * sizeof(char);
 			}
-			DialogEx.Show(this, SystemIconType.Information, "Results", "{0} bytes took {1} seconds".FormatWith(genSize, DateTime.Now.Subtract(start).TotalSeconds));
+			await DialogEx.ShowAsync(this, SystemIconType.Information, "Results", "{0} bytes took {1} seconds".FormatWith(genSize, DateTime.Now.Subtract(start).TotalSeconds));
 		} catch (Exception error) {
-			ExceptionDialog.Show(error);
+			await ExceptionDialog.ShowAsync(error);
 		}
 	}
 
-	private void _fillLockedAsyncButton_Click(object sender, EventArgs e) {
+	private async void _fillLockedAsyncButton_Click(object sender, EventArgs e) {
 		try {
 			//_standardTextBox.Clear();
 			//var start = DateTime.Now;
@@ -183,7 +183,7 @@ public partial class TextAreaTestsScreen : ApplicationScreen {
 
 			//DialogEx.Show(this, SystemIconType.Information, "Results", "{0} bytes took {1} seconds".FormatWith(genSize, DateTime.Now.Subtract(start).TotalSeconds));
 		} catch (Exception error) {
-			ExceptionDialog.Show(error);
+			await ExceptionDialog.ShowAsync(error);
 		}
 	}
 
@@ -196,7 +196,7 @@ public partial class TextAreaTestsScreen : ApplicationScreen {
 	public const char EscapeChar = '\\';
 
 
-	private void _epasaRegexButton_Click(object sender, EventArgs e) {
+	private async void _epasaRegexButton_Click(object sender, EventArgs e) {
 
 		try {
 			//var unescapedSafeAnsiCharPattern =
@@ -351,7 +351,7 @@ public partial class TextAreaTestsScreen : ApplicationScreen {
 			result = regex.Match("account-name:abcd");
 			_standardTextBox.AppendLine(result.ToString());
 		} catch (Exception error) {
-			ExceptionDialog.Show(this, error);
+			await ExceptionDialog.ShowAsync(this, error);
 		}
 	}
 }
