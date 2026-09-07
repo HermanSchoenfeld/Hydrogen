@@ -201,6 +201,11 @@ Backup*/
 UpgradeLog*.XML
 UpgradeLog*.htm
 
+# Local .NET upgrade assistant reports and migration scratch
+/.github/upgrades/
+/Directory.Packages.props.cpmtmp
+/Directory.Packages.props.new
+
 # SQL Server files
 *.mdf
 *.ldf
