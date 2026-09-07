@@ -66,6 +66,49 @@ IDAC dac = connectionPanel.GetDAC();
 
 ## 🔧 Core Components
 
+### CrudGrid
+
+`CrudGrid` hides the create and delete buttons when their respective capabilities are unavailable. Delete is also hidden unless a visible row is selected. Toolbar and paging controls size to their contents, including scaled fonts and DPI.
+
+Set `AllowCellEditing = true` to edit columns with `CanEditCell = true` and a `SetPropertyValue` binding; `CanUpdate` must also be enabled. Changing the editing setting updates existing cells immediately. `LeftClickToDeselect` toggles a row on successive single clicks, including Ctrl-clicks. When both settings are enabled, double-click an editable cell or press **F2** to edit while keeping its row selected; checkbox values also change only through that explicit edit gesture. These selection modes also support `SelectOnMouseUp`.
+
+Manual page sizes range from **1 to 9999**, in steps of one. With paging enabled, `AutoPageSize` uses the grid viewport, measured header and row heights, and any horizontal scrollbar to fit complete rows. It recalculates when the control is resized and retains a minimum page size of one for very small controls.
+
+### References from a data source
+
+Assign a `CrudReferenceBinding<TEntity>` to a column's `ReferenceBinding` to select an existing record from a CRUD dropdown. Set `PropertyName` to the entity's property name so the default edit dialog uses the same picker:
+
+```csharp
+var ManagerBinding = new CrudReferenceBinding<Employee>(EmployeeDataSource, EmployeeColumns,
+	Employee => $"{Employee.FirstName} {Employee.LastName}");
+var ManagerColumn = new CrudGridColumn<Employee> {
+	ColumnName = "Manager",
+	PropertyName = nameof(Employee.Manager),
+	DataType = typeof(Employee),
+	DisplayType = CrudCellDisplayType.DropDownList,
+	PropertyValue = Employee => Employee.Manager,
+	SetPropertyValue = (Employee, Value) => Employee.Manager = (Employee)Value,
+	CanEditCell = true,
+	ReferenceBinding = ManagerBinding
+};
+```
+
+The picker is read-only, automatically fits complete rows, and supports paging, search, and sorting when the data source supports them. Create, edit, delete, and action columns are omitted. Selecting a row assigns that exact record; **Clear** assigns null when allowed, and **Cancel** or Escape preserves the current reference. Set `AllowNull = false` to remove Clear. `DropDownSize` (also exposed as `MaximumDropDownSize`) sets the popup's content size in device pixels, defaulting to 760 × 380 and capped to the available screen space. The grid fills the popup. Search, paging, and empty results keep its dimensions stable; manual resizing lasts for that open picker.
+
+Set `ExpandsToFit = true` on the column that should occupy spare width, such as the Name column in a reference picker. Other columns keep their measured content widths. Multiple configured columns share the extra space; no column stretches implicitly when none is configured. Resizing recalculates the configured columns from their content widths, and content that cannot fit still uses horizontal scrolling. Automatic page sizing continues to fit complete rows in the available grid height.
+
+`CrudGrid.ReferenceBindings` and `DefaultCrudEntityEditor.ReferenceBindings` also accept bindings keyed by a property path, such as `"Manager"` or `"Address.Contact"`. The grid supplies its own data source automatically for properties whose type matches the edited entity type and which have no custom editor or converter. Explicit bindings take precedence. This avoids expanding recursive entity relationships while ordinary nested values such as Address remain editable.
+
+`CrudComboBox` uses the same column configuration. Its `MaximumDropDownSize` and optional `SetCrudParameters(size: ...)` configure the popup size, capped to the available screen space. Use `ExpandsToFit` in its grid bindings to choose which columns fill spare width.
+
+### Default entity editor
+
+The default CRUD dialog expands ordinary reference properties such as `Address` into editable child rows without requiring attributes on the model. Existing interface and abstract instances can also be expanded. Writable concrete types with public parameterless constructors offer **(Create new)** and **(none)** choices. Circular references stop expanding when they reach an object already shown in the current path.
+
+Nested changes retain object identity. Cancel restores edited values on the original objects, including shared references. Save accepts the new baseline only after persistence succeeds, so a failed save can still be cancelled. Change events report full paths such as `Address.Street`.
+
+Custom converters, editors, and read-only metadata remain in use. Custom editor rollback covers editable object properties and `IList` membership. Applications needing domain-specific reference selection or factories, mutable collection-item editing, or opaque state should provide an `ICrudEntityEditor` implementation.
+
 ### DatabaseConnectionPanel
 
 Dynamic database connection UI that loads appropriate controls based on selected provider:

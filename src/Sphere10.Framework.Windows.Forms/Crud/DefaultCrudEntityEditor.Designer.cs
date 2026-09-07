@@ -39,7 +39,8 @@ namespace Sphere10.Framework.Windows.Forms {
 			this._propertyGrid.Dock = System.Windows.Forms.DockStyle.Fill;
 			this._propertyGrid.Location = new System.Drawing.Point(0, 0);
 			this._propertyGrid.Name = "_propertyGrid";
-			this._propertyGrid.Size = new System.Drawing.Size(476, 297);
+			this._propertyGrid.PropertySort = System.Windows.Forms.PropertySort.Alphabetical;
+			this._propertyGrid.Size = new System.Drawing.Size(540, 380);
 			this._propertyGrid.TabIndex = 1;
 			this._propertyGrid.PropertyValueChanged += _propertyGrid_PropertyValueChanged;
 			// 
@@ -49,7 +50,7 @@ namespace Sphere10.Framework.Windows.Forms {
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
 			this.Controls.Add(this._propertyGrid);
 			this.Name = "DefaultEntityEditorControl";
-			this.Size = new System.Drawing.Size(476, 297);
+			this.Size = new System.Drawing.Size(540, 380);
 			this.ResumeLayout(false);
 
 		}
@@ -59,4 +60,3 @@ namespace Sphere10.Framework.Windows.Forms {
 		private System.Windows.Forms.PropertyGrid _propertyGrid;
 	}
 }
-

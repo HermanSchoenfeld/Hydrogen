@@ -8,6 +8,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -27,7 +28,10 @@ public partial class CrudTestScreen : ApplicationScreen {
 	private readonly IEnumerable<ICrudGridColumn> _gridBindings;
 	public CrudTestScreen() {
 		InitializeComponent();
+		ActivationMode = ScreenActivationMode.MultiInstance;
+		Title = "CRUD Grid";
 		_textWriter = new TextBoxWriter(_outputTextBox);
+		_dataSource = new TestCrudDataSource();
 		_flagsCheckedListBox.EnumType = typeof(DataSourceCapabilities);
 		_flagsCheckedListBox.SelectedEnum = DataSourceCapabilities.Default;
 		_gridBindings = new[] {
@@ -96,13 +100,21 @@ public partial class CrudTestScreen : ApplicationScreen {
 				SetPropertyValue = (e, o) => e.StartWorkTime = (DateTime)o
 			},
 			new CrudGridColumn<Employee> {
-				ColumnName = "Address",
+				ColumnName = "Address (street)",
 				SortName = "Address",
 				DataType = typeof(string),
-				PropertyHasValue = e => e.Address != null,
-				PropertyValue = e => string.Format("{0} {1} {2}, {3}", e.Address.Street, e.Address.City, e.Address.State, e.Address.PostCode),
+				PropertyValue = Employee => Employee.Address?.Street,
 				DisplayType = CrudCellDisplayType.Text,
 				ExpandsToFit = true,
+				CanEditCell = true,
+				SetPropertyValue = (Employee, Value) => (Employee.Address ??= new Address()).Street = Value as string
+			},
+			new CrudGridColumn<Employee> {
+				ColumnName = "Location",
+				DataType = typeof(string),
+				PropertyHasValue = Employee => Employee.Address != null,
+				PropertyValue = Employee => $"{Employee.Address.City} {Employee.Address.State}, {Employee.Address.PostCode}",
+				DisplayType = CrudCellDisplayType.Text,
 				CanEditCell = false
 			},
 			new CrudGridColumn<Employee> {
@@ -117,12 +129,12 @@ public partial class CrudTestScreen : ApplicationScreen {
 			},
 			new CrudGridColumn<Employee> {
 				ColumnName = "Manager",
+				PropertyName = nameof(Employee.Manager),
 				SortName = "Manager",
 				DataType = typeof(Employee),
 				PropertyValue = e => e.Manager,
 				DisplayType = CrudCellDisplayType.DropDownList,
-				DropDownItems = (x) => _dataSource.RandomSet().Cast<object>(),
-				DropDownItemDisplayMember = "FirstName",
+
 				ExpandsToFit = true,
 				CanEditCell = true,
 				SetPropertyValue = (e, o) => e.Manager = (Employee)o
@@ -131,8 +143,22 @@ public partial class CrudTestScreen : ApplicationScreen {
 				DisplayType = CrudCellDisplayType.EditCommand,
 			}
 		};
+		var ManagerColumns = new ICrudGridColumn[] {
+			_gridBindings.Single(Column => Column.SortName == nameof(Employee.ID)),
+			new CrudGridColumn<Employee> {
+				ColumnName = "Name",
+				SortName = "Name",
+				DataType = typeof(string),
+				PropertyValue = Employee => $"{Employee.Title} {Employee.FirstName} {Employee.LastName}".Trim(),
+				ExpandsToFit = true
+			},
+			_gridBindings.Single(Column => Column.SortName == nameof(Employee.UIntField))
+		};
+		var ManagerBinding = new CrudReferenceBinding<Employee>(_dataSource, ManagerColumns, Employee => $"{Employee.Title} {Employee.FirstName} {Employee.LastName}".Trim()) {
+			MaximumDropDownSize = new Size(520, 300)
+		};
+		_gridBindings.OfType<CrudGridColumn<Employee>>().Single(Column => Column.PropertyName == nameof(Employee.Manager)).ReferenceBinding = ManagerBinding;
 		_crudGrid.GridBindings = _gridBindings;
-		_dataSource = new TestCrudDataSource();
 		FillDataSourceWithData(_dataSource, 1000);
 		_crudComboBox.DisplayMember = (o) => ((Employee)o).FirstName;
 
@@ -483,5 +509,3 @@ public class Address {
 	public string PostCode { get; set; }
 	public string State { get; set; }
 }
-
-

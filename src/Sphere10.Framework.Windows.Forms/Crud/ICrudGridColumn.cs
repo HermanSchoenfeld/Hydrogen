@@ -18,12 +18,17 @@ public interface ICrudGridColumn {
 	CrudCellDisplayType DisplayType { get; }
 	string SortName { get; }
 
+	string? PropertyName => null;
+
+	CrudReferenceBinding? ReferenceBinding => null;
+
 	bool CellHasValue(object row);
 
 	object GetCellValue(object row);
 
 	void SetCellValue(object row, object @value);
 
+	/// <summary>Whether this column shares spare grid width with other explicitly configured stretch columns.</summary>
 	bool ExpandsToFit { get; }
 	bool CanEditCell { get; }
 
@@ -59,4 +64,3 @@ public enum CrudCellDisplayType {
 	DeleteCommand,
 	Empty
 }
-

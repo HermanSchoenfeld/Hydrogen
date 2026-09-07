@@ -75,14 +75,16 @@ namespace Sphere10.Framework.Windows.Forms {
 			this._layoutPanel.Location = new System.Drawing.Point(0, 0);
 			this._layoutPanel.Name = "_layoutPanel";
 			this._layoutPanel.RowCount = 3;
-			this._layoutPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 31F));
+			this._layoutPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.AutoSize));
 			this._layoutPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
-			this._layoutPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 31F));
+			this._layoutPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.AutoSize));
 			this._layoutPanel.Size = new System.Drawing.Size(524, 306);
 			this._layoutPanel.TabIndex = 1;
 			// 
 			// _topPanel
 			// 
+			this._topPanel.AutoSize = true;
+			this._topPanel.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
 			this._topPanel.Controls.Add(this._titleLabel);
 			this._topPanel.Controls.Add(this._searchTextBox);
 			this._topPanel.Controls.Add(this._createButton);
@@ -90,12 +92,13 @@ namespace Sphere10.Framework.Windows.Forms {
 			this._topPanel.Dock = System.Windows.Forms.DockStyle.Fill;
 			this._topPanel.Location = new System.Drawing.Point(3, 3);
 			this._topPanel.Name = "_topPanel";
+			this._topPanel.Padding = new System.Windows.Forms.Padding(0, 0, 0, 3);
 			this._topPanel.Size = new System.Drawing.Size(518, 25);
 			this._topPanel.TabIndex = 2;
 			// 
 			// _titleLabel
 			// 
-			this._titleLabel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
+			this._titleLabel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
 			this._titleLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
 			this._titleLabel.Location = new System.Drawing.Point(62, 5);
 			this._titleLabel.Name = "_titleLabel";
@@ -117,7 +120,7 @@ namespace Sphere10.Framework.Windows.Forms {
 			// _deleteButton
 			// 
 			this._deleteButton.Image = global::Sphere10.Framework.Windows.Forms.Resources.Minus;
-			this._deleteButton.Location = new System.Drawing.Point(28, 2);
+			this._deleteButton.Location = new System.Drawing.Point(32, 2);
 			this._deleteButton.Name = "_deleteButton";
 			this._deleteButton.Size = new System.Drawing.Size(28, 23);
 			this._deleteButton.TabIndex = 0;
@@ -127,6 +130,8 @@ namespace Sphere10.Framework.Windows.Forms {
 			// 
 			// _bottomPanel
 			// 
+			this._bottomPanel.AutoSize = true;
+			this._bottomPanel.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
 			this._bottomPanel.Controls.Add(this._pageCountLabel);
 			this._bottomPanel.Controls.Add(this._pageNumberBox);
 			this._bottomPanel.Controls.Add(this._lastPageButton);
@@ -140,12 +145,13 @@ namespace Sphere10.Framework.Windows.Forms {
 			this._bottomPanel.Dock = System.Windows.Forms.DockStyle.Fill;
 			this._bottomPanel.Location = new System.Drawing.Point(3, 278);
 			this._bottomPanel.Name = "_bottomPanel";
+			this._bottomPanel.Padding = new System.Windows.Forms.Padding(0, 0, 0, 3);
 			this._bottomPanel.Size = new System.Drawing.Size(518, 25);
 			this._bottomPanel.TabIndex = 3;
 			// 
 			// _lastPageButton
 			// 
-			this._lastPageButton.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+			this._lastPageButton.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
 			this._lastPageButton.Image = global::Sphere10.Framework.Windows.Forms.Resources.MaxArrow;
 			this._lastPageButton.Location = new System.Drawing.Point(492, 2);
 			this._lastPageButton.Name = "_lastPageButton";
@@ -156,9 +162,9 @@ namespace Sphere10.Framework.Windows.Forms {
 			// 
 			// _firstPageButton
 			// 
-			this._firstPageButton.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+			this._firstPageButton.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
 			this._firstPageButton.Image = global::Sphere10.Framework.Windows.Forms.Resources.MinArrow;
-			this._firstPageButton.Location = new System.Drawing.Point(334, 2);
+			this._firstPageButton.Location = new System.Drawing.Point(322, 2);
 			this._firstPageButton.Name = "_firstPageButton";
 			this._firstPageButton.Size = new System.Drawing.Size(20, 20);
 			this._firstPageButton.TabIndex = 11;
@@ -167,9 +173,9 @@ namespace Sphere10.Framework.Windows.Forms {
 			// 
 			// _nextPageButton
 			// 
-			this._nextPageButton.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+			this._nextPageButton.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
 			this._nextPageButton.Image = global::Sphere10.Framework.Windows.Forms.Resources.RArrow;
-			this._nextPageButton.Location = new System.Drawing.Point(473, 2);
+			this._nextPageButton.Location = new System.Drawing.Point(469, 2);
 			this._nextPageButton.Name = "_nextPageButton";
 			this._nextPageButton.Size = new System.Drawing.Size(20, 20);
 			this._nextPageButton.TabIndex = 10;
@@ -178,26 +184,26 @@ namespace Sphere10.Framework.Windows.Forms {
 			// 
 			// _pageSizeUpDown
 			// 
-			this._pageSizeUpDown.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+			this._pageSizeUpDown.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)));
 			this._pageSizeUpDown.Font = new System.Drawing.Font("Arial", 8.25F);
 			this._pageSizeUpDown.Increment = new decimal(new int[] {
-            100,
+            1,
             0,
             0,
             0});
 			this._pageSizeUpDown.Location = new System.Drawing.Point(158, 3);
 			this._pageSizeUpDown.Maximum = new decimal(new int[] {
-            1000,
+            9999,
             0,
             0,
             0});
 			this._pageSizeUpDown.Minimum = new decimal(new int[] {
-            100,
+            1,
             0,
             0,
             0});
 			this._pageSizeUpDown.Name = "_pageSizeUpDown";
-			this._pageSizeUpDown.Size = new System.Drawing.Size(45, 20);
+			this._pageSizeUpDown.Size = new System.Drawing.Size(62, 20);
 			this._pageSizeUpDown.TabIndex = 7;
 			this._pageSizeUpDown.Value = new decimal(new int[] {
             100,
@@ -208,9 +214,9 @@ namespace Sphere10.Framework.Windows.Forms {
 			// 
 			// _previousPageButton
 			// 
-			this._previousPageButton.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+			this._previousPageButton.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
 			this._previousPageButton.Image = global::Sphere10.Framework.Windows.Forms.Resources.LArrow;
-			this._previousPageButton.Location = new System.Drawing.Point(353, 2);
+			this._previousPageButton.Location = new System.Drawing.Point(345, 2);
 			this._previousPageButton.Name = "_previousPageButton";
 			this._previousPageButton.Size = new System.Drawing.Size(20, 20);
 			this._previousPageButton.TabIndex = 9;
@@ -219,7 +225,7 @@ namespace Sphere10.Framework.Windows.Forms {
 			// 
 			// _totalRecordsLabel
 			// 
-			this._totalRecordsLabel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+			this._totalRecordsLabel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)));
 			this._totalRecordsLabel.AutoSize = true;
 			this._totalRecordsLabel.Font = new System.Drawing.Font("Arial", 8.25F);
 			this._totalRecordsLabel.Location = new System.Drawing.Point(34, 5);
@@ -230,7 +236,7 @@ namespace Sphere10.Framework.Windows.Forms {
 			// 
 			// label3
 			// 
-			this.label3.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+			this.label3.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)));
 			this.label3.AutoSize = true;
 			this.label3.Font = new System.Drawing.Font("Arial", 8.25F);
 			this.label3.Location = new System.Drawing.Point(4, 5);
@@ -241,7 +247,7 @@ namespace Sphere10.Framework.Windows.Forms {
 			// 
 			// _pageSizeLabel
 			// 
-			this._pageSizeLabel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+			this._pageSizeLabel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)));
 			this._pageSizeLabel.AutoSize = true;
 			this._pageSizeLabel.Font = new System.Drawing.Font("Arial", 8.25F);
 			this._pageSizeLabel.Location = new System.Drawing.Point(94, 5);
@@ -303,15 +309,16 @@ namespace Sphere10.Framework.Windows.Forms {
 			// 
 			// _pageCountLabel
 			// 
-			this._pageCountLabel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+			this._pageCountLabel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
 			this._pageCountLabel.AutoEllipsis = true;
 			this._pageCountLabel.BackColor = System.Drawing.Color.Transparent;
 			this._pageCountLabel.Font = new System.Drawing.Font("Arial", 8.25F);
-			this._pageCountLabel.Location = new System.Drawing.Point(430, 5);
+			this._pageCountLabel.Location = new System.Drawing.Point(423, 2);
 			this._pageCountLabel.Name = "_pageCountLabel";
-			this._pageCountLabel.Size = new System.Drawing.Size(43, 13);
+			this._pageCountLabel.Size = new System.Drawing.Size(43, 20);
 			this._pageCountLabel.TabIndex = 14;
 			this._pageCountLabel.Text = "/ 12345";
+			this._pageCountLabel.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
 			// 
 			// _searchTextBox
 			// 
@@ -325,9 +332,9 @@ namespace Sphere10.Framework.Windows.Forms {
 			// 
 			// _pageNumberBox
 			// 
-			this._pageNumberBox.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+			this._pageNumberBox.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
 			this._pageNumberBox.Font = new System.Drawing.Font("Arial", 8.25F);
-			this._pageNumberBox.Location = new System.Drawing.Point(379, 2);
+			this._pageNumberBox.Location = new System.Drawing.Point(371, 2);
 			this._pageNumberBox.Name = "_pageNumberBox";
 			this._pageNumberBox.NullText = "1";
 			this._pageNumberBox.Size = new System.Drawing.Size(49, 20);

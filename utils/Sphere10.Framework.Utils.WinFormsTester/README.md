@@ -21,7 +21,19 @@ Build and run `Sphere10.Framework.Utils.WinFormsTester.csproj` on Windows. The a
 
 The other control test screens remain available under their existing navigation sections and can now be opened side by side. The communications screen polls reports on a component-owned UI timer that stops when its handle is destroyed and resumes when recreated. Switching, detaching, re-docking, and closing that screen must not leave a callback invoking a missing handle. The **Hooks** screen batches worker events for a UI timer, stops its hooks while its handle is unavailable, and releases hook subscriptions and resources on close or direct disposal. Reopening or re-docking it must not leave callbacks updating a disposed screen.
 
-Automated coverage for hosting, dragging, navigation, exit, and native async dialogs is in `tests/Sphere10.Framework.Windows.Forms.Tests`:
+## CRUD Grid walkthrough
+
+Choose **Tests 2 > CRUD Grid** to open a fresh screen each time; each tab has its own data and grid settings.
+
+Enable **Allow cell editing** and **CanUpdate** on the CRUD Grid screen to edit **Address (street)** and **Notes** immediately. The street editor creates an address when needed and preserves its other fields, which remain visible in **Location**. Turning editing or update capability off also closes an active cell editor.
+
+Enable **Left click to deselect** to select an unselected row with one click and clear a selected row with the next click, including slow presses and quick switches between rows. When **Allow cell editing** is also enabled, double-click the editable cell or press **F2** to edit while keeping its row selected. A single click on a checkbox selects or deselects its row; double-click or **F2** changes its value.
+
+The manual **Page Size** accepts **1–9999** in steps of one. **Delete** appears only when deletion is allowed and a row is selected.
+
+Open a record's edit dialog and expand **Address** to edit Street, City, State, and PostCode. For a missing address, choose **(Create new)** first. **Manager** opens a read-only CRUD dropdown configured at 520 × 300 containing the full employee data source and showing only **ID**, **Name**, and **Unsigned Int Field**. The same picker opens from an inline Manager cell. The grid fills the dropdown; **Name** is configured with `ExpandsToFit = true` to take spare width, while ID and Unsigned Int Field keep their content widths. Searching and changing pages keep the popup size stable. Resize it to check that Name follows the available width and automatic page sizing fits complete rows; selecting a row assigns that employee, **Clear** removes the manager, and **Cancel** or Escape keeps the previous value. Manager does not expand recursively. **Cancel** restores the original nested values and shared object references.
+
+Automated coverage for hosting, dragging, navigation, exit, native async dialogs, and CRUD grids is in `tests/Sphere10.Framework.Windows.Forms.Tests`:
 
 ```powershell
 dotnet test tests/Sphere10.Framework.Windows.Forms.Tests/Sphere10.Framework.Windows.Forms.Tests.csproj

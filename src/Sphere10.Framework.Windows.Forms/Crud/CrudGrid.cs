@@ -22,7 +22,6 @@ public partial class CrudGrid : UserControl, ICrudGrid {
 
 	#region Constants
 
-	private const int DefaultBarHeight = 31;
 	private const int DefaultRowHeight = 24;
 	private const int DefaultPageSize = 100;
 
@@ -65,8 +64,14 @@ public partial class CrudGrid : UserControl, ICrudGrid {
 	private readonly IDictionary<int, object> _rowToEntityMap;
 	private ILookup<object, int> _entityToRowLookup;
 	private object _selectedEntity;
-	private DateTime _selectedOn;
+	private bool _allowCellEditing;
+	private bool _leftClickToDeselect;
+	private bool _selectOnMouseUp;
+	private int _selectedRowOnMouseDown = -1;
+	private Position _lastClickedCell = Position.Empty;
+	private readonly SourceGrid.Cells.Controllers.MouseSelection _mouseSelectionController = new();
 	private readonly Throttle _refreshThrottle;
+	private Task? _refreshTask;
 
 	#endregion
 
@@ -77,6 +82,13 @@ public partial class CrudGrid : UserControl, ICrudGrid {
 		using (EnterVisualState(VisualState.Loading)) {
 		_threadLock = new object();
 			InitializeComponent();
+			_grid.MouseDown += _grid_MouseDown;
+			_grid.KeyDown += _grid_KeyDown;
+			// Keep SourceGrid's controller order while giving this grid independent mouse-selection settings.
+			_grid.Controller.RemoveController(SourceGrid.Cells.Controllers.MouseSelection.Default);
+			_grid.Controller.RemoveController(SourceGrid.Cells.Controllers.CellEventDispatcher.Default);
+			_grid.Controller.AddController(_mouseSelectionController);
+			_grid.Controller.AddController(SourceGrid.Cells.Controllers.CellEventDispatcher.Default);
 			//BorderStyle = BorderStyle.None;
 			_selectedEntity = null;
 			_dataSource = null;
@@ -84,8 +96,8 @@ public partial class CrudGrid : UserControl, ICrudGrid {
 			_sortColumnName = null;
 			_sortDirection = SortDirection.Ascending;
 			_pageSize = DefaultPageSize;
-			_pageSizeUpDown.Minimum = 100;
-			_pageSizeUpDown.Maximum = int.MaxValue;
+			_pageSizeUpDown.Minimum = 1;
+			_pageSizeUpDown.Maximum = 9999;
 			_pageSizeUpDown.Value = _pageSize;
 			_autoPageSize = false;
 			_pageNumber = 0;
@@ -113,15 +125,31 @@ public partial class CrudGrid : UserControl, ICrudGrid {
 
 	#region Properties
 
-	[Description("When clicking a cell, this allows the user to edit the entity directly. This cannot be used with LeftClickToDeselect.")]
+	[Description("Allows editing a cell directly. With LeftClickToDeselect enabled, double-click the cell or press F2 to edit; otherwise a single click edits.")]
 	[Category("Behavior")]
 	[DefaultValue(false)]
-	public bool AllowCellEditing { get; set; }
+	public bool AllowCellEditing {
+		get => _allowCellEditing;
+		set {
+			if (_allowCellEditing == value)
+				return;
+			_allowCellEditing = value;
+			UpdateCellInteraction();
+		}
+	}
 
-	[Description("When clicking a selected row this will deselect that row. Do not use with AllowCellEditing")]
+	[Description("A single click toggles row selection. When AllowCellEditing is enabled, double-click an editable cell or press F2 to edit without deselecting the row.")]
 	[Category("Behavior")]
 	[DefaultValue(false)]
-	public bool LeftClickToDeselect { get; set; }
+	public bool LeftClickToDeselect {
+		get => _leftClickToDeselect;
+		set {
+			if (_leftClickToDeselect == value)
+				return;
+			_leftClickToDeselect = value;
+			UpdateCellInteraction();
+		}
+	}
 
 	[Description("When clicking a selected row this will deselect that row")]
 	[Category("Behavior")]
@@ -131,7 +159,15 @@ public partial class CrudGrid : UserControl, ICrudGrid {
 	[Description("When selecting a row, selection occurs on mouse up (as opposed to default behavior of mouse down)")]
 	[Category("Behavior")]
 	[DefaultValue(false)]
-	public bool SelectOnMouseUp { get; set; }
+	public bool SelectOnMouseUp {
+		get => _selectOnMouseUp;
+		set {
+			if (_selectOnMouseUp == value)
+				return;
+			_selectOnMouseUp = value;
+			UpdateCellInteraction();
+		}
+	}
 
 	[Description("When a new entity is created successfully this will select that entity.")]
 	[Category("Behavior")]
@@ -151,6 +187,7 @@ public partial class CrudGrid : UserControl, ICrudGrid {
 			}
 			_autoPageSize = value;
 			OrganizeLayout();
+			RefreshAutoPageSize(true);
 		}
 	}
 
@@ -177,7 +214,7 @@ public partial class CrudGrid : UserControl, ICrudGrid {
 			if (value == null && _selectedEntity != null) {
 				RaiseEntityDeselectedEvent(_selectedEntity);
 				_selectedEntity = null;
-				_selectedOn = DateTime.Now;
+				HighlightSelectedEntity();
 				return;
 			}
 
@@ -193,7 +230,6 @@ public partial class CrudGrid : UserControl, ICrudGrid {
 			HighlightSelectedEntity();
 
 			RaiseEntitySelectedEvent(_selectedEntity);
-			_selectedOn = DateTime.Now;
 		}
 	}
 
@@ -216,6 +252,7 @@ public partial class CrudGrid : UserControl, ICrudGrid {
 		get { return _crudCapabilities; }
 		set {
 			_crudCapabilities = value;
+			UpdateCellInteraction();
 			OrganizeLayout();
 		}
 	}
@@ -234,8 +271,15 @@ public partial class CrudGrid : UserControl, ICrudGrid {
 
 	internal object SelectedEntityDirect {
 		get => _selectedEntity;
-		set => _selectedEntity = value;
+		set {
+			_selectedEntity = value;
+			UpdateDeleteButtonVisibility();
+		}
 	}
+
+	[Browsable(false)]
+	[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+	public IDictionary<string, CrudReferenceBinding> ReferenceBindings { get; } = new Dictionary<string, CrudReferenceBinding>(StringComparer.Ordinal);
 
 	private VisualState State { get; set; }
 
@@ -243,9 +287,14 @@ public partial class CrudGrid : UserControl, ICrudGrid {
 
 	#region Public Methods
 
-	public async Task SetDataSource<TEntity>(IDataSource<TEntity> dataSource) {
+	public Task SetDataSource<TEntity>(IDataSource<TEntity> dataSource) => SetDataSource(dataSource, DataSourceCapabilities.Default);
+
+	public async Task SetDataSource<TEntity>(IDataSource<TEntity> dataSource, DataSourceCapabilities Capabilities) {
 		_dataSource = new ProjectedDataSource<TEntity, object>(dataSource, e => e, o => (TEntity)o);
-		_crudCapabilities = await _dataSource.CapabilitiesAsync;
+		_crudCapabilities = await _dataSource.CapabilitiesAsync & Capabilities;
+		if (IsDisposed)
+			return;
+		UpdateCellInteraction();
 		OrganizeLayout();
 	}
 
@@ -330,6 +379,8 @@ public partial class CrudGrid : UserControl, ICrudGrid {
 	private async Task<CrudAction?> ShowEntityEditor(object entity, bool isNewEntity) {
 		using var entityEditorDialog = new CrudEntityEditorDialog();
 		var entityEditor = Tools.Object.Create(_entityEditorType);
+		if (entityEditor is DefaultCrudEntityEditor DefaultEditor)
+			ConfigureReferenceBindings(DefaultEditor, entity);
 		_entityEditorAdapter.SetAdaptee(entityEditor);
 		_entityEditorAdapter.PropertyChanged += RaiseEntityEditingEvent;
 		entityEditorDialog.SetEntityEditor(_dataSource, _entityEditorAdapter, _crudCapabilities, entity, isNewEntity);
@@ -337,13 +388,27 @@ public partial class CrudGrid : UserControl, ICrudGrid {
 		return entityEditorDialog.UserAction;
 	}
 
+	private void ConfigureReferenceBindings(DefaultCrudEntityEditor Editor, object Entity) {
+		// Exact self references use this grid's datasource unless the model declares its own editor/converter.
+		foreach (PropertyDescriptor Property in TypeDescriptor.GetProperties(Entity))
+			if (Property.PropertyType == Entity.GetType() && Property.GetEditor(typeof(System.Drawing.Design.UITypeEditor)) == null
+				&& Property.Converter.GetType() == typeof(TypeConverter))
+				Editor.ReferenceBindings[Property.Name] = new CrudReferenceBinding<object>(_dataSource, _columnsBindings);
+		foreach (var Column in _columnsBindings)
+			if (Column.ReferenceBinding != null && !string.IsNullOrEmpty(Column.PropertyName))
+				Editor.ReferenceBindings[Column.PropertyName] = Column.ReferenceBinding;
+		foreach (var Binding in ReferenceBindings)
+			Editor.ReferenceBindings[Binding.Key] = Binding.Value;
+	}
 	#endregion
 
 	#region Layout
 
 	private void OrganizeLayout() {
-		_createButton.Enabled = _crudCapabilities.HasFlag(DataSourceCapabilities.CanCreate);
+		_createButton.Visible = _createButton.Enabled = _crudCapabilities.HasFlag(DataSourceCapabilities.CanCreate);
 		_deleteButton.Enabled = _deleteToolStripMenuItem.Enabled = _crudCapabilities.HasFlag(DataSourceCapabilities.CanDelete);
+		UpdateDeleteButtonVisibility();
+		_deleteButton.Left = _createButton.Left + (_createButton.Enabled ? _createButton.Width + _createButton.Margin.Right : 0);
 		_editToolStripMenuItem.Enabled = _crudCapabilities.HasFlag(DataSourceCapabilities.CanUpdate);
 		_searchTextBox.Enabled = _crudCapabilities.HasFlag(DataSourceCapabilities.CanSearch);
 
@@ -372,35 +437,52 @@ public partial class CrudGrid : UserControl, ICrudGrid {
 		}
 	}
 
+	private void UpdateDeleteButtonVisibility() {
+		_deleteButton.Visible = _crudCapabilities.HasFlag(DataSourceCapabilities.CanDelete) && _selectedEntity != null &&
+		                       _entityToRowLookup != null && _entityToRowLookup[_selectedEntity].Any(Row => _grid.Selection.IsSelectedRow(Row));
+	}
 	internal void AutoSizeCells() {
 		_grid.AutoSizeCells();
 	}
 
 	private void ShowButtonBar() {
-		_layoutPanel.RowStyles[0].Height = DefaultBarHeight;
+		_topPanel.Visible = true;
+		_layoutPanel.RowStyles[0].SizeType = SizeType.AutoSize;
 	}
 
 	private void HideButtonBar() {
+		_topPanel.Visible = false;
+		_layoutPanel.RowStyles[0].SizeType = SizeType.Absolute;
 		_layoutPanel.RowStyles[0].Height = 0;
 	}
 
 	private void ShowPageBar() {
-		_layoutPanel.RowStyles[2].Height = DefaultBarHeight;
+		_bottomPanel.Visible = true;
+		_layoutPanel.RowStyles[2].SizeType = SizeType.AutoSize;
 	}
 
 	private void HidePageBar() {
+		_bottomPanel.Visible = false;
+		_layoutPanel.RowStyles[2].SizeType = SizeType.Absolute;
 		_layoutPanel.RowStyles[2].Height = 0;
 	}
 
-	public async Task RefreshGrid() {
-		if (DesignMode || State.IsIn(VisualState.Loading))
+	public Task RefreshGrid() {
+		if (_refreshTask is { IsCompleted: false })
+			return _refreshTask;
+		return _refreshTask = RefreshGridInternal();
+	}
+
+	private async Task RefreshGridInternal() {
+		if (DesignMode || IsDisposed || State.IsIn(VisualState.Loading))
 			return;
 		using (EnterVisualState(VisualState.Loading)) {
-			if (await _refreshThrottle.IsCallerFirstInStampede()) {
+			if (await _refreshThrottle.IsCallerFirstInStampede() && !IsDisposed) {
 				using (LoadingCircle.EnterAnimationScope(this._gridContainerPanel, 1.0f, LoadingCircle.StylePresets.MacOSX)) {
 					_grid.Enabled = false;
 					while (await BindInternal()) ;
-					_grid.Enabled = true;
+					if (!IsDisposed)
+						_grid.Enabled = true;
 				}
 			}
 		}
@@ -420,6 +502,49 @@ public partial class CrudGrid : UserControl, ICrudGrid {
 		_grid.Selection.CellGotFocus += _grid_Selection_CellGotFocus;
 	}
 
+	private void UpdateCellInteraction() {
+		if (_grid == null || _rowToEntityMap == null)
+			return;
+
+		// CrudGrid owns row toggling; SourceGrid's Ctrl-click selection must not process the same press again.
+		_mouseSelectionController.MouseButtons = LeftClickToDeselect ? MouseButtons.None : MouseButtons.Left;
+		foreach (var Row in _rowToEntityMap) {
+			for (var Column = 0; Column < Math.Min(_columnsBindings.Length, _grid.ColumnsCount); Column++) {
+				var Cell = _grid[Row.Key, Column];
+				if (Cell != null)
+					ConfigureCellInteraction(Cell, _columnsBindings[Column], Row.Value);
+			}
+		}
+	}
+
+	private void ConfigureCellInteraction(ICell Cell, ICrudGridColumn Column, object Entity) {
+		var CanEdit = AllowCellEditing && _crudCapabilities.HasFlag(DataSourceCapabilities.CanUpdate) && Column.CanEditCell && Column.CellHasValue(Entity);
+		if (Cell.Editor != null) {
+			if (!CanEdit && Cell.Editor.IsEditing)
+				new CellContext(_grid, new Position(Cell.Row.Index, Cell.Column.Index)).EndEdit(true);
+			Cell.Editor.EnableEdit = CanEdit;
+			Cell.Editor.EditableMode = LeftClickToDeselect ? EditableMode.None : EditableMode.Focus | EditableMode.SingleClick;
+		}
+
+		// Selection-only cells must not activate SourceGrid's focus-driven editor or row selection.
+		Cell.RemoveController(SourceGrid.Cells.Controllers.Unselectable.Default);
+		if (!AllowCellEditing || LeftClickToDeselect)
+			Cell.AddController(SourceGrid.Cells.Controllers.Unselectable.Default);
+
+		// Checkbox clicks normally change the value directly; reserve that action for the explicit edit gesture when rows toggle.
+		if (Cell is SourceGrid.Cells.CheckBox) {
+			Cell.RemoveController(SourceGrid.Cells.Controllers.CheckBox.Default);
+			if (!LeftClickToDeselect)
+				Cell.AddController(SourceGrid.Cells.Controllers.CheckBox.Default);
+		}
+
+		var RowSelector = Cell.FindController<SourceGrid.Cells.Controllers.RowSelector>();
+		if (RowSelector != null)
+			Cell.RemoveController(RowSelector);
+		if (!LeftClickToDeselect)
+			Cell.AddController(new SourceGrid.Cells.Controllers.RowSelector(!SelectOnMouseUp));
+	}
+
 	private void HighlightSelectedEntity() {
 		using (EnterVisualState(VisualState.Loading)) {
 			_grid.Selection.ResetSelection(false);
@@ -428,6 +553,7 @@ public partial class CrudGrid : UserControl, ICrudGrid {
 					_grid.Selection.SelectRow(rowNum, true);
 				}
 			}
+			UpdateDeleteButtonVisibility();
 		}
 	}
 	
@@ -491,8 +617,10 @@ public partial class CrudGrid : UserControl, ICrudGrid {
 	}
 
 	private int CalculateAutoPageSize() {
-		const bool includeHorizontalBarHeight = false;
-		return (int)Math.Floor(((float)_gridContainerPanel.Height - DefaultRowHeight - (includeHorizontalBarHeight ? SystemInformation.HorizontalScrollBarHeight : 0)) / DefaultRowHeight);
+		// Use the actual viewport and measured rows, including the header and any horizontal scrollbar.
+		var HeaderHeight = _grid.Rows.Count > 0 ? _grid.Rows[0].Height : DefaultRowHeight;
+		var RowHeight = Math.Max(DefaultRowHeight, _grid.Rows.Skip(1).Select(Row => Row.Height).DefaultIfEmpty(DefaultRowHeight).Max());
+		return Math.Max(1, (_grid.DisplayRectangle.Height - HeaderHeight) / RowHeight);
 	}
 
 	#endregion
@@ -522,6 +650,8 @@ public partial class CrudGrid : UserControl, ICrudGrid {
 		// Read the data from the data source
 		_rowToEntityMap.Clear();
         var readResult = await _dataSource.ReadRangeAsync(searchText, pageSize, pageNumber, _sortColumnName, _sortDirection);
+		if (IsDisposed)
+			return false;
 		var data = readResult.Items.ToArray();
 		_totalRecords = readResult.TotalCount;
 		_endPageNumber = ((int)Math.Ceiling(_totalRecords / (decimal)_pageSize) - 1).ClipTo(0, int.MaxValue);
@@ -569,13 +699,23 @@ public partial class CrudGrid : UserControl, ICrudGrid {
 				HighlightSelectedEntity();
 
 				// Finalize the grid layout
-				_grid.AutoSizeCells();
 				_grid.AutoStretchColumnsToFitWidth = true;
-				_grid.Columns.StretchToFit();
+				_grid.AutoSizeCells();
 			} finally {
 				_grid.ResumeLayout();
 			}
+			_grid.Columns.StretchToFit();
+			searchParametersChangedDuringSearch |= pageSize != _pageSize;
 
+			// The first binding measures editors, images and fonts that can be taller than the default row.
+			// Only shrink during this binding cycle so pages with different row heights cannot oscillate.
+			if (AutoPageSize && _crudCapabilities.HasFlag(DataSourceCapabilities.CanPage)) {
+				var FittingPageSize = CalculateAutoPageSize();
+				if (FittingPageSize < _pageSize) {
+					_pageSize = FittingPageSize;
+					searchParametersChangedDuringSearch = true;
+				}
+			}
 		}
 
 		return searchParametersChangedDuringSearch;
@@ -645,20 +785,14 @@ public partial class CrudGrid : UserControl, ICrudGrid {
 					throw new NotImplementedException(string.Format("CrudColumnType not supported '{0}'", column.DisplayType));
 			}
 
-			if (cell.Editor != null) {
-				cell.Editor.EnableEdit = _crudCapabilities.HasFlag(DataSourceCapabilities.CanUpdate) && AllowCellEditing && column.CanEditCell;
-				cell.Editor.EditableMode = SourceGrid.EditableMode.Focus | SourceGrid.EditableMode.SingleClick;
+			if (cell.Editor != null)
 				cell.AddController(new UpdateEntityOnValueChangedController(this, _dataSource, column, entity));
-			}
 
 		} else {
 			cell = CreateEmptyCell();
 		}
 
-		if (!AllowCellEditing) {
-			cell.AddController(SourceGrid.Cells.Controllers.Unselectable.Default);
-		}
-		cell.AddController(new SourceGrid.Cells.Controllers.RowSelector(!SelectOnMouseUp));
+		ConfigureCellInteraction(cell, column, entity);
 		return cell;
 	}
 
@@ -701,6 +835,8 @@ public partial class CrudGrid : UserControl, ICrudGrid {
 	}
 
 	private Cell CreateDropDownListCell(ICrudGridColumn columnBinding, object entity, object cellValue) {
+		if (columnBinding.ReferenceBinding != null)
+			return new Cell(cellValue, new SourceGrid.Cells.Editors.CrudReference(columnBinding.DataType, columnBinding.ReferenceBinding));
 		var editor = new SourceGrid.Cells.Editors.DropDownList(columnBinding.DataType, columnBinding.DropDownItemDisplayMember);
 		editor.Control.ValueMember = columnBinding.DropDownItemDisplayMember;
 		editor.Control.DisplayMember = columnBinding.DropDownItemDisplayMember;
@@ -787,6 +923,7 @@ public partial class CrudGrid : UserControl, ICrudGrid {
 	#region Event Triggers
 
 	protected void RaiseEntitySelectedEvent(object selectedEntity) {
+		UpdateDeleteButtonVisibility();
 		if (this.CanRaiseEvents) {
 			OnEntitySelected(selectedEntity);
 			if (EntitySelected != null)
@@ -795,6 +932,7 @@ public partial class CrudGrid : UserControl, ICrudGrid {
 	}
 
 	protected void RaiseEntityDeselectedEvent(object deselectedEntity) {
+		UpdateDeleteButtonVisibility();
 		if (this.CanRaiseEvents) {
 			OnEntityDeselected(deselectedEntity);
 			if (EntityDeselected != null)
@@ -838,17 +976,22 @@ public partial class CrudGrid : UserControl, ICrudGrid {
 
 	#region Event Handlers
 
-	async void _gridContainerPanel_Resize(object sender, EventArgs e) {
+	private void _gridContainerPanel_Resize(object Sender, EventArgs Args) {
+		RefreshAutoPageSize();
+	}
+
+	private async void RefreshAutoPageSize(bool ForceRefresh = false) {
 		try {
-			if (State != VisualState.Normal)
+			if (_crudCapabilities.HasFlag(DataSourceCapabilities.CanPage) && AutoPageSize)
+				_pageSize = CalculateAutoPageSize();
+			else if (!ForceRefresh)
 				return;
 
-			if (_crudCapabilities.HasFlag(DataSourceCapabilities.CanPage) && AutoPageSize) {
-				_pageSize = CalculateAutoPageSize();
+			// A pending read detects the new page size and binds again when its result arrives.
+			if (State == VisualState.Normal)
 				await RefreshGrid();
-			}
-		} catch (Exception error) {
-			await ExceptionDialog.ShowAsync(this, error);
+		} catch (Exception Error) {
+			await ExceptionDialog.ShowAsync(this, Error);
 		}
 	}
 
@@ -972,19 +1115,17 @@ public partial class CrudGrid : UserControl, ICrudGrid {
 			if (State != VisualState.Normal)
 				return;
 
-			if (e.RemovedRange != null && _selectedEntity != null && _selectedOn.TimeElapsed().TotalMilliseconds > 50) {
-				RaiseEntityDeselectedEvent(_selectedEntity);
-				_selectedEntity = null;
-			}
+			var SelectedRows = _grid.Selection.GetSelectionRegion().GetRowsIndex();
+			var Entity = SelectedRows.Where(_rowToEntityMap.ContainsKey).Select(Row => _rowToEntityMap[Row]).FirstOrDefault();
+			if (ReferenceEquals(Entity, _selectedEntity))
+				return;
 
-			if (e.AddedRange != null) {
-				var addedRows = e.AddedRange.GetRowsIndex();
-				if (addedRows.Length > 0 && _selectedOn.TimeElapsed().TotalMilliseconds > 50) {
-					_selectedEntity = _rowToEntityMap[addedRows[0]];
-					_selectedOn = DateTime.Now;
-					RaiseEntitySelectedEvent(_selectedEntity);
-				}
-			}
+			var PreviousEntity = _selectedEntity;
+			_selectedEntity = Entity;
+			if (PreviousEntity != null)
+				RaiseEntityDeselectedEvent(PreviousEntity);
+			if (Entity != null)
+				RaiseEntitySelectedEvent(Entity);
 		} catch (Exception error) {
 			await ExceptionDialog.ShowAsync(this, error);
 		}
@@ -999,10 +1140,38 @@ public partial class CrudGrid : UserControl, ICrudGrid {
 
 	private async void _grid_MouseDoubleClick(object sender, MouseEventArgs e) {
 		try {
-			if (!LeftClickToDeselect)
+			if (LeftClickToDeselect && e.Button == MouseButtons.Left) {
+				if (!TryStartCellEdit(_grid.PositionAtPoint(e.Location)))
+					ToggleRowSelection(e);
+			} else if (!LeftClickToDeselect)
 				await EditSelectedEntity();
 		} catch (Exception error) {
 			await ExceptionDialog.ShowAsync(this, error);
+		}
+	}
+
+	private async void _grid_MouseDown(object Sender, MouseEventArgs Event) {
+		try {
+			_selectedRowOnMouseDown = -1;
+			if (State != VisualState.Normal)
+				return;
+
+			var Position = _grid.PositionAtPoint(Event.Location);
+			if (Position.IsEmpty() || !_rowToEntityMap.ContainsKey(Position.Row))
+				return;
+
+			if (Event.Button == MouseButtons.Left)
+				_lastClickedCell = Position;
+			if (LeftClickToDeselect)
+				_grid.Focus(false);
+
+			// Remember the selection before SourceGrid processes the press, regardless of its duration.
+			if (Event.Button == MouseButtons.Left && _grid.Selection.IsSelectedRow(Position.Row))
+				_selectedRowOnMouseDown = Position.Row;
+			if (LeftClickToDeselect && (Event.Button == MouseButtons.Right || Event.Button == MouseButtons.Left && !SelectOnMouseUp))
+				_grid.Selection.SelectRow(Position.Row, true);
+		} catch (Exception Error) {
+			await ExceptionDialog.ShowAsync(this, Error);
 		}
 	}
 
@@ -1010,13 +1179,8 @@ public partial class CrudGrid : UserControl, ICrudGrid {
 		try {
 			switch (e.Button) {
 				case MouseButtons.Left:
-					if (LeftClickToDeselect) {
-						if (_grid.Selection.IsSelectedRow(_grid.PositionAtPoint(e.Location).Row) && DateTime.Now.Subtract(_selectedOn) > TimeSpan.FromMilliseconds(50)) {
-							_grid.Selection.ResetSelection(false);
-							_grid.SelectionMode = SourceGrid.GridSelectionMode.None;
-							this.BeginInvokeEx(InitializeGridSelectionMode);
-						}
-					}
+					if (LeftClickToDeselect)
+						ToggleRowSelection(e);
 					break;
 				case MouseButtons.Right:
 					if (RightClickForContextMenu) {
@@ -1029,6 +1193,66 @@ public partial class CrudGrid : UserControl, ICrudGrid {
 		} catch (Exception error) {
 			await ExceptionDialog.ShowAsync(this, error);
 		}
+	}
+
+	private async void _grid_KeyDown(object Sender, KeyEventArgs Event) {
+		try {
+			if (!LeftClickToDeselect || !AllowCellEditing || Event.KeyCode != Keys.F2)
+				return;
+
+			var Position = _lastClickedCell;
+			if (Position.IsEmpty() || !_grid.Selection.IsSelectedRow(Position.Row)) {
+				var Row = _grid.Selection.GetSelectionRegion().GetRowsIndex().FirstOrDefault(_rowToEntityMap.ContainsKey, -1);
+				if (Row < 0)
+					return;
+				var Column = Enumerable.Range(0, _grid.ColumnsCount).FirstOrDefault(Index => _grid[Row, Index]?.Editor?.EnableEdit == true, -1);
+				if (Column < 0)
+					return;
+				Position = new Position(Row, Column);
+			}
+			Event.Handled = TryStartCellEdit(Position);
+			Event.SuppressKeyPress = Event.Handled;
+		} catch (Exception Error) {
+			await ExceptionDialog.ShowAsync(this, Error);
+		}
+	}
+
+	private bool TryStartCellEdit(Position Position) {
+		if (State != VisualState.Normal || Position.IsEmpty() || !_rowToEntityMap.ContainsKey(Position.Row) || Position.Column >= _grid.ColumnsCount)
+			return false;
+
+		var Context = new CellContext(_grid, Position);
+		if (Context.Cell?.Editor?.EnableEdit != true)
+			return false;
+		if (Context.IsEditing())
+			return true;
+
+		_grid.Selection.SelectRow(Position.Row, true);
+		Context.Cell.RemoveController(SourceGrid.Cells.Controllers.Unselectable.Default);
+		using var RestoreFocusBehavior = new ActionDisposable(() => {
+			if (LeftClickToDeselect)
+				Context.Cell.AddController(SourceGrid.Cells.Controllers.Unselectable.Default);
+		});
+		// Activating an editor resets SourceGrid's focus internally without changing the selected entity.
+		using (EnterVisualState(VisualState.Selecting))
+			Context.StartEdit();
+		if (Context.Cell is SourceGrid.Cells.CheckBox)
+			return Context.Cell.Editor.SetCellValue(Context, !((bool?)Context.Value ?? false));
+		return Context.IsEditing();
+	}
+
+	private void ToggleRowSelection(MouseEventArgs Event) {
+		if (State != VisualState.Normal)
+			return;
+
+		var Position = _grid.PositionAtPoint(Event.Location);
+		if (Position.IsEmpty() || !_rowToEntityMap.ContainsKey(Position.Row))
+			return;
+
+		if (_selectedRowOnMouseDown == Position.Row)
+			_grid.Selection.ResetSelection(false);
+		else
+			_grid.Selection.SelectRow(Position.Row, true);
 	}
 
 	private async void _deselectToolStripMenuItem_Click(object sender, EventArgs e) {
@@ -1073,4 +1297,3 @@ public partial class CrudGrid : UserControl, ICrudGrid {
 
 	#endregion
 }
-

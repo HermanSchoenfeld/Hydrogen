@@ -103,7 +103,12 @@ public class TestBlock : ApplicationBlock {
 				.AddScreenItem<CompressionTestScreen>("Compression", Resources.Generic16x16)
 				.AddScreenItem<AppointmentBookScreen>("AppointmentBook", Resources.Generic16x16)
 				.AddScreenItem<FlagsCheckedBoxListScreen>("FlagsCheckedBoxList", Resources.Generic16x16)
-				.AddScreenItem<CrudTestScreen>("Crud", Resources.Database16x16)
+				.ConfigureItem(Item => Item.AsScreenItem()
+					.WithText("CRUD Grid")
+					.WithScreen<CrudTestScreen>()
+					.AsMultiInstance()
+					.WithImage(Resources.Database16x16)
+					.WithTitle("CRUD Grid"))
 				.AddScreenItem<LoadingCircleTestScreen>("LoadingCircle", Resources.Generic16x16)
 				.AddScreenItem<PlaceHolderTestScreen>("PlaceHolder", Resources.Generic16x16)
 				.AddScreenItem<PadLockTestScreen>("PadLock", Resources.Generic16x16)
@@ -209,7 +214,7 @@ public class TestBlock : ApplicationBlock {
 						new ScreenMenuItem("Compression", typeof(CompressionTestScreen), null),
 						new ScreenMenuItem("AppointmentBook", typeof(AppointmentBookScreen), null),
 						new ScreenMenuItem("FlagsCheckedBoxList", typeof(FlagsCheckedBoxListScreen), null),
-						new ScreenMenuItem("Crud", typeof(CrudTestScreen), null),
+						new ScreenMenuItem("CRUD Grid", typeof(CrudTestScreen), null) { ActivationMode = ScreenActivationMode.MultiInstance, ScreenTitle = "CRUD Grid" },
 						new ScreenMenuItem("LoadingCircle", typeof(LoadingCircleTestScreen), null),
 						new ScreenMenuItem("PlaceHolder", typeof(PlaceHolderTestScreen), null),
 						new ScreenMenuItem("PadLock", typeof(PadLockTestScreen), null),

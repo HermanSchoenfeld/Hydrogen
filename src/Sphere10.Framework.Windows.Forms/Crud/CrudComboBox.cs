@@ -11,11 +11,13 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Drawing;
 using System.Threading.Tasks;
+using System.Windows.Forms;
 
 namespace Sphere10.Framework.Windows.Forms.Crud;
 
 public class CrudComboBox : CustomComboBox {
 	private readonly CrudGrid _crudGrid;
+	private Size _maximumDropDownSize = new(760, 380);
 
 	[Category("Behavior")] public event EventHandlerEx<CrudComboBox, object> EntitySelectionChanged;
 
@@ -30,6 +32,7 @@ public class CrudComboBox : CustomComboBox {
 		_crudGrid.EntitySelected += new EventHandlerEx<CrudGrid, object>(_crudGrid_EntitySelected);
 		_crudGrid.EntityDeselected += new EventHandlerEx<CrudGrid, object>(_crudGrid_EntityDeselected);
 		_crudGrid.BorderStyle = System.Windows.Forms.BorderStyle.None;
+		_crudGrid.MinimumSize = Size.Empty;
 		base.DropDownControl = _crudGrid;
 		AutoHideOnSelect = true;
 		SelectedEntity = null;
@@ -48,6 +51,18 @@ public class CrudComboBox : CustomComboBox {
 	[Category("Behavior")]
 	[DefaultValue(true)]
 	public bool AutoHideOnSelect { get; set; }
+
+	/// <summary>The configured dropdown content size in device pixels, limited by the available screen space.</summary>
+	[Category("Custom Drop-Down")]
+	[DefaultValue(typeof(Size), "760, 380")]
+	public Size MaximumDropDownSize {
+		get => _maximumDropDownSize;
+		set {
+			Guard.Argument(value.Width > 0 && value.Height > 0, nameof(value), "The maximum dropdown dimensions must be positive.");
+			_maximumDropDownSize = value;
+			ApplyDropDownSize();
+		}
+	}
 
 	[Category("Behavior")]
 	[DefaultValue(DataSourceCapabilities.Default)]
@@ -75,6 +90,9 @@ public class CrudComboBox : CustomComboBox {
 
 
 	public override async void ShowDropDown() {
+		if (IsDroppedDown || IsDisposed)
+			return;
+		ApplyDropDownSize();
 		base.ShowDropDown();
 		await _crudGrid.RefreshGrid();
 	}
@@ -87,9 +105,11 @@ public class CrudComboBox : CustomComboBox {
 			await _crudGrid.SetDataSource(dataSource);
 			_crudGrid.Capabilities = capabilities;
 			if (size != null)
-				_crudGrid.Size = size.Value;
+				MaximumDropDownSize = size.Value;
 			_crudGrid.AutoPageSize = autoPageSize;
 			_crudGrid.AutoSizeCells();
+			if (!IsDroppedDown)
+				ApplyDropDownSize();
 		} catch (Exception error) {
 			await ExceptionDialog.ShowAsync(this, error);
 		}
@@ -98,6 +118,23 @@ public class CrudComboBox : CustomComboBox {
 	protected virtual void OnEntitySelectionChanged(object entity) {
 		if (AutoHideOnSelect)
 			HideDropDown();
+	}
+
+	private void ApplyDropDownSize() {
+		if (_crudGrid == null || IsDisposed || _crudGrid.IsDisposed)
+			return;
+		var WorkingArea = Screen.FromControl(this).WorkingArea;
+		var AvailableHeight = WorkingArea.Height;
+		if (IsHandleCreated) {
+			var Bounds = RectangleToScreen(ClientRectangle);
+			var SpaceAbove = Tools.Values.ClipValue(Bounds.Top - WorkingArea.Top, 0, WorkingArea.Height);
+			var SpaceBelow = Tools.Values.ClipValue(WorkingArea.Bottom - Bounds.Bottom, 0, WorkingArea.Height);
+			AvailableHeight = Math.Max(SpaceAbove, SpaceBelow);
+		}
+		var MaximumSize = new Size(Math.Min(_maximumDropDownSize.Width, Math.Max(1, WorkingArea.Width - 2)),
+			Math.Min(_maximumDropDownSize.Height, Math.Max(1, AvailableHeight - (AllowResizeDropDown ? 18 : 2))));
+		_crudGrid.MaximumSize = MaximumSize;
+		_crudGrid.Size = MaximumSize;
 	}
 
 	private void SetComboText(string text) {
