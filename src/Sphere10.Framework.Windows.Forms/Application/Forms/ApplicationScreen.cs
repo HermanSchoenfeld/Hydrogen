@@ -24,14 +24,16 @@ namespace Sphere10.Framework.Windows.Forms;
 /// such  calls are routed to, is guaranteed to be set post-construction.
 /// </summary>
 public class ApplicationScreen : ApplicationControl, IHelpableObject {
-	private int _showCount;
-	private readonly List<ToolStripItem> _menuStripItems;
-
 	public event EventHandler ScreenLoaded;
 	public event EventHandler ScreenDisplayed;
 	public event EventHandler ScreenDisplayedFirstTime;
 	public event EventHandler<HideScreenEventArgs> ScreenHidden;
 	public event EventHandler ScreenDestroyed;
+
+	private int _showCount;
+	private bool _destroyed;
+	private ScreenActivationMode _activationMode;
+	private readonly List<ToolStripItem> _menuStripItems;
 
 	public ApplicationScreen()
 		: this(null) {
@@ -55,10 +57,26 @@ public class ApplicationScreen : ApplicationControl, IHelpableObject {
 	[Browsable(true), Category("Layout"), Description("How this screen will be displayed to the user")]
 	public ScreenDisplayMode DisplayMode { get; set; }
 
-	[Browsable(true), Category("Behavior"), Description("How this screen will be displayed to the user")]
-	public ScreenActivationMode ActivationMode { get; set; }
+	/// <summary>The type's constructor default or explicit builder declaration. Every instance of a hosted type uses the same mode.</summary>
+	[Browsable(true), Category("Behavior"), DefaultValue(ScreenActivationMode.SingleInstance), Description("The instance policy declared by this screen type")]
+	public ScreenActivationMode ActivationMode {
+		get => _activationMode;
+		protected set {
+			Guard.Argument(value == ScreenActivationMode.SingleInstance || value == ScreenActivationMode.MultiInstance, nameof(value), "Unknown activation mode");
+			Guard.Ensure(ScreenHost == null, "A screen's activation mode cannot change while it belongs to a host");
+			_activationMode = value;
+		}
+	}
+
+	[Browsable(true), Category("Appearance"), Description("The title displayed in the screen tab and detached window")]
+	public string Title {
+		get => Text;
+		set => Text = value;
+	}
 
 	[Browsable(false)] public IApplicationBlock ApplicationBlock { get; set; }
+
+	internal IApplicationScreenHost? ScreenHost { get; set; }
 
 	/// <summary>
 	/// The menu items associated with this screen.
@@ -92,6 +110,21 @@ public class ApplicationScreen : ApplicationControl, IHelpableObject {
 	protected virtual void OnShowFirstTime() {
 	}
 
+	protected override void OnLoad(EventArgs Args) {
+		base.OnLoad(Args);
+		ScreenLoaded?.Invoke(this, EventArgs.Empty);
+	}
+
+	protected override void Dispose(bool Disposing) {
+		if (Disposing && !_destroyed) {
+			NotifyScreenDestroyed();
+			foreach (var Item in _menuStripItems)
+				Item.Dispose();
+			ToolBar?.Dispose();
+		}
+		base.Dispose(Disposing);
+	}
+
 	protected virtual void OnShow() {
 		if (_showCount++ == 0)
 			NotifyShowScreenFirstTime();
@@ -120,6 +153,8 @@ public class ApplicationScreen : ApplicationControl, IHelpableObject {
 		}
 	}
 
+	internal void ConfigureActivationMode(ScreenActivationMode Mode) => ActivationMode = Mode;
+
 	internal void NotifyShow() {
 		OnShow();
 		ScreenDisplayed?.Invoke(this, EventArgs.Empty);
@@ -135,10 +170,14 @@ public class ApplicationScreen : ApplicationControl, IHelpableObject {
 		if (!cancel) {
 			var cancelArgs = new HideScreenEventArgs();
 			ScreenHidden?.Invoke(this, cancelArgs);
+			cancel = cancelArgs.Cancel;
 		}
 	}
 
 	internal void NotifyScreenDestroyed() {
+		if (_destroyed)
+			return;
+		_destroyed = true;
 		OnDestroyScreen();
 		ScreenDestroyed?.Invoke(this, EventArgs.Empty);
 	}

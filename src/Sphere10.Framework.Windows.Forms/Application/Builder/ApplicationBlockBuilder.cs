@@ -48,15 +48,16 @@ public class ApplicationBlockBuilder {
 		return this;
 	}
 
-	public ApplicationBlockBuilder WithDefaultScreen(Type screenType) {
+	public ApplicationBlockBuilder WithDefaultScreen(Type screenType, string? title = null) {
 		Guard.ArgumentNotNull(screenType, nameof(screenType));
+		Guard.Argument(typeof(ApplicationScreen).IsAssignableFrom(screenType) && !screenType.IsAbstract, nameof(screenType), "A concrete ApplicationScreen type is required");
 		_block.DefaultScreen = screenType;
+		_block.DefaultScreenTitle = title;
 		return this;
 	}
 
-	public ApplicationBlockBuilder WithDefaultScreen<TScreen>() {
-		_block.DefaultScreen = typeof(TScreen);
-		return this;
+	public ApplicationBlockBuilder WithDefaultScreen<TScreen>(string? title = null) where TScreen : ApplicationScreen {
+		return WithDefaultScreen(typeof(TScreen), title);
 	}
 
 	public ApplicationBlockBuilder AddMenu(Action<MenuBuilder> menuBuild) {

@@ -12,5 +12,8 @@ namespace Sphere10.Framework.Windows.Forms;
 
 public interface IScreenMenuItem : ILinkMenuItem {
 	Type Screen { get; }
+	/// <summary>Optional declaration of the screen type's instance policy, shared by every menu entry for that type.</summary>
+	ScreenActivationMode? ActivationMode => null;
+	string? ScreenTitle => null;
 }
 

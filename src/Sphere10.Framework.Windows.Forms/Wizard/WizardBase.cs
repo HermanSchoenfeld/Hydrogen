@@ -107,14 +107,12 @@ public abstract class WizardBase<T> : SyncDisposable, IWizard<T> {
 	}
 
 	public async Task<WizardResult> Start(Form parent) {
-		var tcs = new TaskCompletionSource();
 		CheckNotStarted();
 		_owner = parent;
-		_dialog = new WizardDialog<T>();
+		using var Dialog = new WizardDialog<T>();
+		_dialog = Dialog;
 		_dialog.Text = _title;
 		_dialog.WizardManager = this;
-		_dialog.FormClosing += (sender, args) => { };
-		_dialog.FormClosed += (sender, args) => { tcs.SetResult(); };
 		_currentScreenIndex = 0;
 		_started = true;
 		foreach (var screen in _screens.Value)
@@ -123,8 +121,7 @@ public abstract class WizardBase<T> : SyncDisposable, IWizard<T> {
 		var maxHeight = _screens.Value.Max(x => x.Size.Height);
 		_dialog.Size = new Size(maxWidth, maxHeight) + _dialog.DialogSizeOverhead;
 		await PresentScreen(_screens.Value[_currentScreenIndex]);
-		_dialog.Show(_owner);
-		await tcs.Task;
+		await _dialog.ShowDialogAsync(_owner);
 		return WizardResult;
 	}
 

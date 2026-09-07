@@ -7,6 +7,7 @@
 // This notice must not be removed when duplicating this file or its contents, in whole or in part.
 
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Windows.Forms;
 using Sphere10.Framework.Application;
@@ -15,9 +16,86 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Sphere10.Framework.Windows.Forms;
 
 public partial class MainForm : LiteMainForm {
+	private readonly List<ToolStripItem> _screenToolBarItems = new();
+	private ToolStripMenuItem? _screenMenu;
+	private bool _screenToolBarVisible;
 
 	public MainForm() {
 		InitializeComponent();
+		ScreenHost = new ApplicationScreenHost { Dock = DockStyle.Fill };
+		Controls.Add(ScreenHost);
+		ScreenHost.BringToFront();
+		ScreenHost.ActiveScreenChanging += OnActiveScreenChanging;
+		ScreenHost.ActiveScreenChanged += OnActiveScreenChanged;
+	}
+
+	[DefaultValue(ScreenMode.SingleView), Category("Behavior"), Description("Display one screen or multiple screens in detachable tabs")]
+	public ScreenMode ScreenMode {
+		get => ScreenHost.ScreenMode;
+		set => ScreenHost.ScreenMode = value;
+	}
+
+	[Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+	public ApplicationScreenHost ScreenHost { get; }
+
+	[Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+	public ApplicationScreen? ActiveScreen {
+		get => ScreenHost.ActiveScreen;
+		set {
+			if (value != null)
+				ScreenHost.ShowScreen(value);
+			else if (ActiveScreen != null)
+				ScreenHost.CloseScreen(ActiveScreen);
+		}
+	}
+
+	public bool ShowScreen(ApplicationScreen Screen) => ScreenHost.ShowScreen(Screen);
+
+	protected virtual void OnActiveScreenChanging(ApplicationScreen? Screen) {
+		RestoreScreenToolBar();
+		if (_screenMenu != null) {
+			_screenMenu.DropDownItems.Clear();
+			MenuStrip.Items.Remove(_screenMenu);
+			_screenMenu.Dispose();
+			_screenMenu = null;
+		}
+	}
+
+	protected virtual void OnActiveScreenChanged(ApplicationScreen? Screen) {
+		if (Screen == null)
+			return;
+		if (Screen.ShowInApplicationMenuStrip) {
+			_screenMenu = new ToolStripMenuItem(Screen.ApplicationMenuStripText) { Tag = Screen };
+			_screenMenu.DropDownItems.AddRange(Screen.MenuItems);
+			var HelpIndex = HelpToolStripMenuItem == null ? -1 : MenuStrip.Items.IndexOf(HelpToolStripMenuItem);
+			MenuStrip.Items.Insert(HelpIndex < 0 ? MenuStrip.Items.Count : HelpIndex, _screenMenu);
+		}
+		MergeScreenToolBar();
+	}
+
+	protected void RestoreScreenToolBar() {
+		if (ActiveScreen?.ToolBar != null && !ActiveScreen.ToolBar.IsDisposed) {
+			ActiveScreen.ToolBar.Items.AddRange(_screenToolBarItems.ToArray());
+			if (_screenToolBarItems.Count > 0)
+				ActiveScreen.ToolBar.Visible = _screenToolBarVisible;
+		}
+		_screenToolBarItems.Clear();
+	}
+
+	protected void MergeScreenToolBar() {
+		if (ActiveScreen?.ToolBar == null || _screenToolBarItems.Count > 0)
+			return;
+		_screenToolBarVisible = ActiveScreen.ToolBar.Visible;
+		foreach (ToolStripItem Item in ActiveScreen.ToolBar.Items)
+			_screenToolBarItems.Add(Item);
+		ActiveScreen.ToolBar.Visible = false;
+		ToolStrip.Items.AddRange(_screenToolBarItems.ToArray());
+	}
+
+	protected override void OnApplicationExiting(CancelEventArgs Args) {
+		base.OnApplicationExiting(Args);
+		if (!Args.Cancel)
+			Args.Cancel = !ScreenHost.CanCloseScreens(ScreenHost.Screens);
 	}
 
 	#region Form Properties

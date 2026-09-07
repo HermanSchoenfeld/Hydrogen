@@ -8,15 +8,15 @@ public class SystemExpertBlock : ApplicationBlock {
 	public static ApplicationBlock Build() {
 		return new ApplicationBlockBuilder()
 			.WithName("System Expert")
-			.WithDefaultScreen<SystemInfoScreen>()
-			.AddMenu(mb => mb
+			.WithDefaultScreen<SystemInfoScreen>(title: "System Info")
+			.AddMenu(Menu => Menu
 				.WithText("Tools")
-				.AddScreenItem<SystemInfoScreen>("System Info", null)
-				.AddScreenItem<ProcessesScreen>("Processes", null)
-				.AddScreenItem<ServicesScreen>("Services", null)
-				.AddScreenItem<NetworkScreen>("Network", null)
-				.AddScreenItem<EventLogScreen>("Event Log", null)
-				.AddScreenItem<EnvironmentScreen>("Environment", null)
+				.ConfigureItem(Item => Item.AsScreenItem().WithText("System Info").WithScreen<SystemInfoScreen>().AsSingleInstance().WithTitle("System Info"))
+				.ConfigureItem(Item => Item.AsScreenItem().WithText("Processes").WithScreen<ProcessesScreen>().AsSingleInstance().WithTitle("Processes"))
+				.ConfigureItem(Item => Item.AsScreenItem().WithText("Services").WithScreen<ServicesScreen>().AsSingleInstance().WithTitle("Services"))
+				.ConfigureItem(Item => Item.AsScreenItem().WithText("Network").WithScreen<NetworkScreen>().AsSingleInstance().WithTitle("Network"))
+				.ConfigureItem(Item => Item.AsScreenItem().WithText("Event Log").WithScreen<EventLogScreen>().AsSingleInstance().WithTitle("Event Log"))
+				.ConfigureItem(Item => Item.AsScreenItem().WithText("Environment").WithScreen<EnvironmentScreen>().AsSingleInstance().WithTitle("Environment"))
 			)
 			.Build();
 	}

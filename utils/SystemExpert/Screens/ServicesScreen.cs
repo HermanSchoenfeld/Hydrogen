@@ -71,8 +71,8 @@ public partial class ServicesScreen : ApplicationScreen {
 		UpdateAutoRefreshUI();
 	}
 
-	protected override async void OnLoad(EventArgs e) {
-		base.OnLoad(e);
+	protected override async void OnShowFirstTime() {
+		base.OnShowFirstTime();
 		await _crudGrid.SetDataSource(_dataSource);
 		_crudGrid.Capabilities = DataSourceCapabilities.CanRead | DataSourceCapabilities.CanSearch | DataSourceCapabilities.CanSort | DataSourceCapabilities.CanPage;
 		await _crudGrid.RefreshGrid();

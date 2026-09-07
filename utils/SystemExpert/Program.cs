@@ -9,6 +9,8 @@ static class Program {
 
 	[STAThread]
 	static void Main(string[] args) {
+		// Preserve the designer layouts and let Windows bitmap-scale each complete window.
+		System.Windows.Forms.Application.SetHighDpiMode(System.Windows.Forms.HighDpiMode.DpiUnaware);
 		System.Windows.Forms.Application.EnableVisualStyles();
 		System.Windows.Forms.Application.SetCompatibleTextRenderingDefault(false);
 		AppDomain.CurrentDomain.UnhandledException += async (Sender, Args) => {
@@ -29,7 +31,7 @@ static class Program {
 
 		Sphere10Framework.Instance
 			.BuildWinFormsApplication()
-			.UseMainForm<BlockMainForm>()
+			.UseMainForm<BlockMainForm>(Form => Form.ScreenMode = ScreenMode.MultiView)
 			.UseModule<ModuleConfiguration>()
 			.UseModule<Sphere10.Framework.Application.ModuleConfiguration>()
 			.UseModule<Sphere10.Framework.Windows.Forms.ModuleConfiguration>()

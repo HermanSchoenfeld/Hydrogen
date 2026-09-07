@@ -70,9 +70,21 @@ public partial class ApplicationBar : ApplicationControl {
 	}
 
 	public void RemoveItem(Item item) {
-		Debug.Assert(_items.Contains(item));
+		Guard.ArgumentNotNull(item, nameof(item));
+		Guard.Argument(_items.Contains(item), nameof(item), "Item is not registered");
+		var WasSelected = SelectedItem == item;
 		_items.Remove(item);
 		_buttonsToShow--;
+		item.Button.ButtonStateChanged -= Button_ButtonStateChanged;
+		item.Button.Dispose();
+		if (WasSelected) {
+			item.MenuControl.Parent?.Controls.Remove(item.MenuControl);
+			ApplicationBarControl = null;
+			if (_items.Count > 0)
+				SelectedItem = _items[0];
+		}
+		_splitContainer.Panel2Collapsed = _items.Count <= 1;
+		PerformCustomLayout();
 	}
 
 	public bool ContainsItem(Item item) {

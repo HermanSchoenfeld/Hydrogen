@@ -24,7 +24,8 @@
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>
-    
+    <ForceDesignerDPIUnaware>true</ForceDesignerDPIUnaware>
+
     <!-- NuGet Packaging -->
     <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
     <IncludeSymbols>true</IncludeSymbols>

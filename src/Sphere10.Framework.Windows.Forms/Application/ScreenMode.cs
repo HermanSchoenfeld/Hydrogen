@@ -1,15 +1,14 @@
 // Copyright (c) Herman Schoenfeld 2018 - Present. All rights reserved. (https://sphere10.com)
 // Author: Herman Schoenfeld
 //
-// Distributed under the MIT software license, see the accompanying file
-// LICENSE or visit http://www.opensource.org/licenses/mit-license.php.
+// Distributed under the MIT NON-AI software license, see the accompanying file
+// LICENSE or visit https://sphere10.com/legal/NON-AI-MIT.
 //
 // This notice must not be removed when duplicating this file or its contents, in whole or in part.
 
 namespace Sphere10.Framework.Windows.Forms;
 
-public enum ScreenActivationMode {
-	SingleInstance = 0,
-	MultiInstance = 1
+public enum ScreenMode {
+	SingleView,
+	MultiView
 }
-

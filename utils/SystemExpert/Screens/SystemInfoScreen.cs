@@ -29,8 +29,8 @@ public partial class SystemInfoScreen : ApplicationScreen {
 		InitializeComponent();
 	}
 
-	protected override void OnLoad(EventArgs e) {
-		base.OnLoad(e);
+	protected override void OnShowFirstTime() {
+		base.OnShowFirstTime();
 		try {
 			_cpuCounter = new PerformanceCounter("Processor", "% Processor Time", "_Total");
 			_cpuCounter.NextValue(); // prime the counter

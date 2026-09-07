@@ -88,6 +88,8 @@ public class ApplicationBlock : IApplicationBlock {
 
 	public Type DefaultScreen { get; set; }
 
+	public string? DefaultScreenTitle { get; set; }
+
 	public virtual void AddMenu(IMenu menu) {
 		menu.Parent = this;
 		_menus.Add(menu);

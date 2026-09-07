@@ -26,5 +26,6 @@ public interface IApplicationBlock : IDisposable {
 	bool ShowInToolStrip { get; }
 
 	Type DefaultScreen { get; }
+	string? DefaultScreenTitle => null;
 }
 
