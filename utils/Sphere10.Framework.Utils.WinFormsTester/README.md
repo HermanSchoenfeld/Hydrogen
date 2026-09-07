@@ -33,7 +33,11 @@ The manual **Page Size** accepts **1–9999** in steps of one. **Delete** appear
 
 Open a record's edit dialog and expand **Address** to edit Street, City, State, and PostCode. For a missing address, choose **(Create new)** first. **Manager** opens a read-only CRUD dropdown configured at 520 × 300 containing the full employee data source and showing only **ID**, **Name**, and **Unsigned Int Field**. The same picker opens from an inline Manager cell. The grid fills the dropdown; **Name** is configured with `ExpandsToFit = true` to take spare width, while ID and Unsigned Int Field keep their content widths. Searching and changing pages keep the popup size stable. Resize it to check that Name follows the available width and automatic page sizing fits complete rows; selecting a row assigns that employee, **Clear** removes the manager, and **Cancel** or Escape keeps the previous value. Manager does not expand recursively. **Cancel** restores the original nested values and shared object references.
 
-Automated coverage for hosting, dragging, navigation, exit, native async dialogs, and CRUD grids is in `tests/Sphere10.Framework.Windows.Forms.Tests`:
+## Demo Wizard walkthrough
+
+Choose **Wizard > Wizard Demo**. The first step requires a name and the confirmation checkbox; the age step requires a non-negative whole number, including zero. Invalid **Next** displays validation errors and keeps the current step and model unchanged. Accepted **Next** saves the input. Use **Previous** from the age step to revisit and edit the name. The third step hides Previous as its instructions describe. The confirmation screen shows the collected name and age, and **Finish** passes that same model to the completion action.
+
+Automated coverage for hosting, dragging, navigation, exit, native async dialogs, CRUD grids, and wizard validation and collection is in `tests/Sphere10.Framework.Windows.Forms.Tests`:
 
 ```powershell
 dotnet test tests/Sphere10.Framework.Windows.Forms.Tests/Sphere10.Framework.Windows.Forms.Tests.csproj

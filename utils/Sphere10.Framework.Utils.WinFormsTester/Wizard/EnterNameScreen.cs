@@ -15,15 +15,24 @@ public partial class EnterNameScreen : DemoWizardScreenBase {
 		InitializeComponent();
 	}
 
-	public override async Task Initialize() {
+	public override Task<Result> Validate() {
+		var Validation = Result.Default;
+		if (string.IsNullOrWhiteSpace(textBox1.Text))
+			Validation.AddError("Enter your name.");
+		if (!checkBox1.Checked)
+			Validation.AddError("Check the confirmation box to proceed.");
+		return Task.FromResult(Validation);
 	}
 
-	public override async Task<Result> Validate() {
-		if (!checkBox1.Checked)
-			return Result.Error("Checkbox not checked");
+	public override Task OnNext() {
+		CopyUIToModel();
+		return Task.CompletedTask;
+	}
 
-		return Result.Default;
+	protected override void CopyUIToModel() => Model.Name = textBox1.Text.Trim();
+
+	protected override void CopyModelToUI() {
+		if (Wizard != null)
+			textBox1.Text = Model.Name;
 	}
 }
-
-

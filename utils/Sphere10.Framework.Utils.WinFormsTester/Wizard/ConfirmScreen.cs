@@ -6,8 +6,6 @@
 //
 // This notice must not be removed when duplicating this file or its contents, in whole or in part.
 
-using System.Threading.Tasks;
-
 namespace Sphere10.Framework.Utils.WinFormsTester.Wizard;
 
 public partial class ConfirmScreen : DemoWizardScreenBase {
@@ -15,12 +13,10 @@ public partial class ConfirmScreen : DemoWizardScreenBase {
 		InitializeComponent();
 	}
 
-	public override async Task Initialize() {
-	}
-
-	public override async Task<Result> Validate() {
-		return Result.Default;
+	protected override void CopyModelToUI() {
+		if (Wizard == null)
+			return;
+		label3.Text = Model.Name;
+		label4.Text = Model.Age?.ToString() ?? string.Empty;
 	}
 }
-
-
