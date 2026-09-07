@@ -9,6 +9,7 @@ Task-specific skills for working in this repository. Load the skill that matches
 | [decorator-pattern](decorator-pattern/SKILL.md) | Layering behavior over an existing abstraction with a `FooDecorator` (`ExtendedListDecorator` reference). |
 | [tools-namespace](tools-namespace/SKILL.md) | Adding or using a `Tools.*` static utility, or reaching for a raw BCL call that a tool covers. |
 | [builder-pattern](builder-pattern/SKILL.md) | Creating a fluent `FooBuilder` with chainable `With*`/`Add*` methods and a terminal `.Build()`. |
+| [state-machines](state-machines/SKILL.md) | Application workflows and session lifecycles with Stateless, typed triggers, hierarchical states, guarded transitions, and async actions. |
 | [serialization](serialization/SKILL.md) | Writing `IItemSerializer<T>` implementations, using `SerializerBuilder`/`SerializerFactory`, or touching endian-aware I/O. |
 | [guards-and-scopes](guards-and-scopes/SKILL.md) | Argument/invariant validation (`Guard`), or resource/state cleanup via disposable scopes. |
 | [disposable-scopes](disposable-scopes/SKILL.md) | Acquiring a resource, entering a state, locking, or guaranteed cleanup — the `IScope`/`Tools.Scope`/synchronization/transaction scope idiom. |
