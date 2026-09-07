@@ -19,6 +19,7 @@ Task-specific skills for working in this repository. Load the skill that matches
 | [crypto](crypto/SKILL.md) | Hashing, random bytes, digital signatures, key derivation. Never raw BCL crypto. |
 | [logging](logging/SKILL.md) | Adding log output; `ILogger`, `SystemLog`, decorators and sinks. |
 | [winforms-ui](winforms-ui/SKILL.md) | WinForms screens, wizards (`WizardBuilder`), application blocks (`ApplicationBlockBuilder`), `CrudGrid`. |
+| [crud-grid](crud-grid/SKILL.md) | Configuring or extending WinForms `CrudGrid`, inline and property-grid editing, data-source reference pickers, paging, and dropdown column layout. |
 | [user-settings](user-settings/SKILL.md) | Persisting per-user preferences and UI state between sessions with `SettingsObject`, `UserSettings`, and automatic main-window placement. |
 | [job-scheduler](job-scheduler/SKILL.md) | Recurring/one-shot background jobs via `JobBuilder` and `Scheduler`. |
 | [unit-testing](unit-testing/SKILL.md) | Writing or modifying NUnit tests. |
