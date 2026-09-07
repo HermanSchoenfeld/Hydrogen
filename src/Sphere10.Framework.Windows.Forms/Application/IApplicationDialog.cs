@@ -6,6 +6,7 @@
 //
 // This notice must not be removed when duplicating this file or its contents, in whole or in part.
 
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace Sphere10.Framework.Windows.Forms;
@@ -15,6 +16,10 @@ public interface IApplicationDialog {
 	DialogResult ShowDialog();
 
 	DialogResult ShowDialog(IWin32Window parent);
+
+	Task<DialogResult> ShowDialogAsync();
+
+	Task<DialogResult> ShowDialogAsync(IWin32Window owner);
 
 	FormStartPosition StartPosition { get; set; }
 

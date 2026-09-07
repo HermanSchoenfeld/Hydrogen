@@ -13,6 +13,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using NUnit.Framework;
+using Sphere10.Framework.Windows;
 using WinFormsApplication = System.Windows.Forms.Application;
 
 namespace Sphere10.Framework.Windows.Forms.Tests;
@@ -81,46 +82,65 @@ public class AsyncModalTests {
 	});
 
 	[Test]
-	public void GenericModalPreservesOwnerAndDisposesAfterCompletion() => RunWithMessageLoop(async Owner => {
-		var Pending = Owner.ShowDialogAsync<ProbeDialog>();
-		using var Dialog = await WaitForDialog<ProbeDialog>();
+	public void NativeModalPreservesOwnerAndDisablesItUntilCompletion() => RunWithMessageLoop(async Owner => {
+		using var Dialog = new ProbeDialog();
+		var Pending = Dialog.ShowDialogAsync(Owner);
+		await WaitForDialog<ProbeDialog>();
 		Assert.That(Pending.IsCompleted, Is.False);
 		Assert.That(Dialog.Owner, Is.SameAs(Owner));
-		Assert.That(Dialog.IsDisposed, Is.False);
+		Assert.That(Dialog.Modal, Is.True);
+		Assert.That(IsWindowEnabled(Owner), Is.False);
 		Dialog.DialogResult = DialogResult.OK;
 		Assert.That(await Pending, Is.EqualTo(DialogResult.OK));
-		Assert.That(Dialog.IsDisposed, Is.True);
+		Assert.That(IsWindowEnabled(Owner), Is.True);
+		Assert.That(Dialog.IsDisposed, Is.False, "The caller owns the native dialog's lifetime.");
 	});
 
-	[Test]
-	public void ApplicationDialogUsesNativeModalAndLeavesDisposalToCaller() => RunWithMessageLoop(async Owner => {
+	[TestCase(false)]
+	[TestCase(true)]
+	public void ApplicationDialogUsesNativeModalAndLeavesDisposalToCaller(bool ExplicitOwner) => RunWithMessageLoop(async Owner => {
 		using var Dialog = new ProbeDialog();
 		IApplicationDialog ApplicationDialog = Dialog;
-		var Pending = ApplicationDialog.ShowDialogAsync(Owner);
+		var Pending = ExplicitOwner ? ApplicationDialog.ShowDialogAsync(Owner) : ApplicationDialog.ShowDialogAsync();
 		Assert.That(Pending.IsCompleted, Is.False);
 		await WaitForDialog<ProbeDialog>();
-		Assert.That(Dialog.Owner, Is.SameAs(Owner));
+		if (ExplicitOwner)
+			Assert.That(Dialog.Owner, Is.SameAs(Owner));
+		Assert.That(Dialog.Modal, Is.True);
 		Dialog.DialogResult = DialogResult.Cancel;
 		Assert.That(await Pending, Is.EqualTo(DialogResult.Cancel));
 		Assert.That(Dialog.IsDisposed, Is.False);
 	});
 
+	[Test]
+	public void ApplicationDialogInheritsWinFormsAsyncMethods() {
+		var AsyncMethods = typeof(ProbeDialog).GetMethods().Where(Method => Method.Name == nameof(Form.ShowDialogAsync)).ToArray();
+		Assert.That(AsyncMethods, Has.Length.EqualTo(2));
+		Assert.That(AsyncMethods.All(Method => Method.DeclaringType == typeof(Form)), Is.True, "No framework modal wrapper should intercept WinForms async dialogs.");
+	}
+
 	[TestCase(false)]
 	[TestCase(true)]
-	public void ApplicationDialogFallbackPostsAndPropagatesOutcome(bool Fail) => RunWithMessageLoop(async Owner => {
-		var Expected = new InvalidOperationException("Fallback failure");
-		var Dialog = new FallbackDialog(() => Fail ? throw Expected : DialogResult.Yes);
-		var Pending = Dialog.ShowDialogAsync(Owner);
-		Assert.That(Dialog.ShowCount, Is.Zero, "The synchronous fallback must be posted, not called inline.");
-		Exception? Actual = null;
-		try {
-			Assert.That(await Pending, Is.EqualTo(DialogResult.Yes));
-		} catch (Exception Error) {
-			Actual = Error;
-		}
-		Assert.That(Actual, Is.SameAs(Fail ? Expected : null));
-		Assert.That(Dialog.ShowCount, Is.EqualTo(1));
-		Assert.That(Dialog.LastOwner, Is.SameAs(Owner));
+	public void WizardUsesNativeModalForCancellationAndCompletion(bool Finish) => RunWithMessageLoop(async Owner => {
+		using var Wizard = new WizardBuilder<object>()
+			.WithTitle("Native wizard")
+			.WithModel(new object())
+			.AddScreen(new WizardScreen<object>())
+			.OnFinished(_ => Task.FromResult(Result.Default))
+			.Build();
+		var Pending = Wizard.Start(Owner);
+		using var Dialog = await WaitForDialog<WizardDialog<object>>();
+		Assert.That(Pending.IsCompleted, Is.False);
+		Assert.That(Dialog.Owner, Is.SameAs(Owner));
+		Assert.That(Dialog.Modal, Is.True);
+		Assert.That(IsWindowEnabled(Owner), Is.False);
+		if (Finish)
+			await Wizard.Next();
+		else
+			((Form)Dialog).Close();
+		Assert.That(await Pending, Is.EqualTo(Finish ? WizardResult.Success : WizardResult.Cancelled));
+		Assert.That(IsWindowEnabled(Owner), Is.True);
+		Assert.That(Dialog.IsDisposed, Is.True);
 	});
 
 	[TestCase(DialogResult.OK, true)]
@@ -193,6 +213,13 @@ public class AsyncModalTests {
 		Assert.That(Dialog.Visible, Is.False);
 	});
 
+	private static bool IsWindowEnabled(Form Form) {
+		// WinForms disables the native owner window without changing Control.Enabled for every owner type.
+		const int WindowStyleIndex = -16;
+		const long DisabledStyle = 0x08000000;
+		return (WinAPI.USER32.GetWindowLong(Form.Handle, WindowStyleIndex).ToInt64() & DisabledStyle) == 0;
+	}
+
 	private static async Task WaitUntil(Func<bool> Condition) {
 		for (var Attempt = 0; Attempt < 500; Attempt++) {
 			if (Condition())
@@ -240,20 +267,6 @@ public class AsyncModalTests {
 	}
 
 	public class ProbeDialog : Form, IApplicationDialog { }
-
-	private sealed class FallbackDialog(Func<DialogResult> Show) : IApplicationDialog {
-		public int ShowCount { get; private set; }
-		public IWin32Window? LastOwner { get; private set; }
-		public FormStartPosition StartPosition { get; set; }
-		public bool Visible { get; set; }
-		public DialogResult ShowDialog() => ShowDialog(null!);
-		public DialogResult ShowDialog(IWin32Window Parent) {
-			ShowCount++;
-			LastOwner = Parent;
-			return Show();
-		}
-		public void Refresh() { }
-	}
 
 	private sealed class ChangedEntityEditor : Control, ICrudEntityEditor<object> {
 		public event EventHandlerEx<CrudEntityPropertyChangedEventArgs> PropertyChanged { add { } remove { } }
