@@ -6,6 +6,7 @@
 //
 // This notice must not be removed when duplicating this file or its contents, in whole or in part.
 
+using System;
 using System.Drawing;
 using System.Linq;
 using System.Reflection;
@@ -30,9 +31,9 @@ public static class Sphere10FrameworkExtensions {
 		return framework.Build();
 	}
 
-	public static Sphere10FrameworkBuilder UseMainForm<TMainForm>(this Sphere10FrameworkBuilder builder)
+	public static Sphere10FrameworkBuilder UseMainForm<TMainForm>(this Sphere10FrameworkBuilder builder, Action<TMainForm>? Configure = null)
 		where TMainForm : class, IMainForm {
-		builder.ConfigureServices(services => services.AddMainForm<TMainForm>());
+		builder.ConfigureServices(services => services.AddMainForm(Configure));
 		return builder;
 	}
 
@@ -66,6 +67,10 @@ public static class Sphere10FrameworkExtensions {
 
 		// Start the framework (splash title/subtitle update during this via events)
 		builder.Start();
+		using var FrameworkLifetime = Tools.Scope.ExecuteOnDispose(() => {
+			if (builder.Framework.IsStarted)
+				builder.Framework.EndFramework();
+		});
 
 		var MainForm = Sphere10Framework.Instance.ServiceProvider.GetService<IMainForm>();
 		if (MainForm is not Form)

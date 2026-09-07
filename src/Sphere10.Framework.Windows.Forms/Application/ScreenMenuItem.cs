@@ -37,6 +37,10 @@ public class ScreenMenuItem : LinkMenuItem, IScreenMenuItem {
 		set { _screen = value; }
 	}
 
+	public virtual ScreenActivationMode? ActivationMode { get; set; }
+
+	public virtual string? ScreenTitle { get; set; }
+
 	public override void Dispose() {
 		base.Dispose();
 	}

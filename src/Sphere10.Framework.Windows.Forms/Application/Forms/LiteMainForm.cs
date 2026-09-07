@@ -25,6 +25,10 @@ public partial class LiteMainForm : ApplicationForm, IMainForm {
 	public event EventHandler NotFirstTimeExecutedByUserEvent;
 	public event EventHandler<CancelEventArgs> ApplicationExitingEvent;
 
+	private bool _confirmingExit;
+	private bool _exitConfirmed;
+	private FormCloseAction? _closeActionBeforeExit;
+
 	public LiteMainForm() {
 		System.Windows.Forms.Application.ThreadException += ApplicationOnThreadException;
 		InitializeComponent();
@@ -80,33 +84,53 @@ public partial class LiteMainForm : ApplicationForm, IMainForm {
 		}
 	}
 
-	protected sealed override void OnClosing(CancelEventArgs cancelArgs) {
-		base.OnClosing(cancelArgs);
-		if (cancelArgs.Cancel) {
-			// Base canceled closing because it probably hid and/or minimized the form
+	protected sealed override async void OnFormClosing(FormClosingEventArgs Args) {
+		base.OnFormClosing(Args);
+		if (Args.Cancel) {
 			ApplicationExiting = false;
+			RestoreCloseAction();
+			return;
+		}
+		if (_exitConfirmed)
+			return;
+		if (SuppressExitConfirmation) {
+			ApplicationExiting = true;
+			FireApplicationExitingEvent(Args);
+			ApplicationExiting = !Args.Cancel;
 			return;
 		}
 
-		try {
-			// Set application exiting if not already done so
-			if (!ApplicationExiting)
-				ApplicationExiting = true;
-
-			// Ask user to confirm exit
-			if (SuppressExitConfirmation || AskYN("Are you sure you want to exit?")) {
-				// Now ask form observers to confirm exit
-				FireApplicationExitingEvent(cancelArgs);
-				// If no aborts, ask framework to confirm exit
-				if (!cancelArgs.Cancel)
-					Sphere10Framework.Instance.TerminateApplication(0);
-			} else {
-				cancelArgs.Cancel = true;
+		// WinForms cannot await a closing event. Cancel this attempt and close again after confirmation.
+		Args.Cancel = true;
+		if (_confirmingExit)
+			return;
+		_confirmingExit = true;
+		ApplicationExiting = true;
+		using var ConfirmationScope = Tools.Scope.ExecuteOnDispose(() => {
+			_confirmingExit = false;
+			if (!IsDisposed) {
+				_exitConfirmed = false;
+				ApplicationExiting = false;
+				RestoreCloseAction();
 			}
-		} finally {
-			ApplicationExiting = !cancelArgs.Cancel;
+		});
+		try {
+			await Task.Yield();
+			if (!await ConfirmExitAsync() || IsDisposed)
+				return;
+			var Cancellation = new CancelEventArgs();
+			FireApplicationExitingEvent(Cancellation);
+			if (Cancellation.Cancel)
+				return;
+			_exitConfirmed = true;
+			Close();
+		} catch (Exception Error) {
+			ReportError(Error);
 		}
 	}
+
+	protected virtual async Task<bool> ConfirmExitAsync()
+		=> await DialogEx.ShowAsync(this, SystemIconType.Question, "Confirm", "Are you sure you want to exit?", "&No", "&Yes") == DialogExResult.Button2;
 
 	protected virtual void OnApplicationExiting(CancelEventArgs cancelEventArgs) {
 	}
@@ -154,34 +178,29 @@ public partial class LiteMainForm : ApplicationForm, IMainForm {
 	}
 
 	public virtual void Exit(bool force = false) {
-		if (!this.IsDisposed && this.IsHandleCreated) {
-			ExecuteInUIFriendlyContext(ExitInternal);
-		} else {
+		if (IsDisposed)
+			return;
+		if (force)
+			Sphere10Framework.Instance.TerminateApplication(0);
+		if (IsHandleCreated)
+			this.InvokeEx(ExitInternal);
+		else
 			ExitInternal();
-		}
 
 		void ExitInternal() {
-			var oldSuppressExitConfirmation = SuppressExitConfirmation;
-			var oldAction = CloseAction;
-			try {
-				SuppressExitConfirmation = force;
-				//System.Environment.Exit(-1);
-				if (SuppressExitConfirmation) 
-					Sphere10Framework.Instance.TerminateApplication(0);
+			// File > Exit also closes forms configured to hide or minimize with the window close button.
+			_closeActionBeforeExit ??= CloseAction;
+			CloseAction = FormCloseAction.Close;
+			Close();
+			if (!_confirmingExit && !IsDisposed)
+				RestoreCloseAction();
+		}
+	}
 
-				CloseAction = FormCloseAction.Close;
-				Close();
-			} catch {
-				try {
-					System.Windows.Forms.Application.Exit();
-				} catch {
-					Sphere10Framework.Instance.TerminateApplication(0);
-				}
-			} finally {
-				// This runs if close is aborted
-				CloseAction = oldAction;
-				SuppressExitConfirmation = oldSuppressExitConfirmation;
-			}
+	private void RestoreCloseAction() {
+		if (_closeActionBeforeExit.HasValue) {
+			CloseAction = _closeActionBeforeExit.Value;
+			_closeActionBeforeExit = null;
 		}
 	}
 
@@ -297,6 +316,8 @@ public partial class LiteMainForm : ApplicationForm, IMainForm {
 
 	private void FireApplicationExitingEvent(CancelEventArgs cancelEvent) {
 		OnApplicationExiting(cancelEvent);
+		if (cancelEvent.Cancel)
+			return;
 		// Call each observer, if any one decides to cancel abort do not notify remaining observers
 		if (ApplicationExitingEvent != null) {
 			foreach (EventHandler<CancelEventArgs> exitHandler in ApplicationExitingEvent.GetInvocationList()) {

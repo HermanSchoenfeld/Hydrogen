@@ -15,12 +15,16 @@ namespace Sphere10.Framework.Windows.Forms;
 
 public static class IoCExtensions {
 
-	public static void AddMainForm<TMainForm>(this IServiceCollection serviceCollection)
+	public static void AddMainForm<TMainForm>(this IServiceCollection serviceCollection, Action<TMainForm>? Configure = null)
 		where TMainForm : class, IMainForm {
-		serviceCollection.AddSingleton<IMainForm, TMainForm>();
+		serviceCollection.AddSingleton<IMainForm>(Provider => {
+			var Form = ActivatorUtilities.CreateInstance<TMainForm>(Provider);
+			Configure?.Invoke(Form);
+			return Form;
+		});
 		serviceCollection.AddSingleton<IApplicationIconProvider>(provider => provider.GetService<IMainForm>());
 		serviceCollection.AddSingleton<IUserInterfaceServices>(provider => provider.GetService<IMainForm>());
-		if (typeof(TMainForm).IsSubclassOf(typeof(IBlockManager)))
+		if (typeof(IBlockManager).IsAssignableFrom(typeof(TMainForm)))
 			serviceCollection.AddSingleton(provider => (IBlockManager)provider.GetService<IMainForm>());
 	}
 

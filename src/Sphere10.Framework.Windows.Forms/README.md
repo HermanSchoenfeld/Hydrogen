@@ -36,6 +36,8 @@ WinForms closing and validation events still require cancellation and handled fl
 
 Run the STA regression tests with `dotnet test tests/Sphere10.Framework.Windows.Forms.Tests/Sphere10.Framework.Windows.Forms.Tests.csproj` on Windows. They exercise actual forms with a message loop and close their dialogs automatically.
 
+File > Exit and the close button use an asynchronous confirmation backed by native WinForms modality. The initial close is cancelled before awaiting confirmation, and an accepted request closes the form after screen and application veto checks. Framework shutdown occurs after `Application.Run` returns, allowing normal window disposal to finish first.
+
 ## ⚡ 10-Second Example
 
 ```csharp
@@ -278,6 +280,68 @@ The builder pattern supports:
 - **Fluent API**: Chain methods for clean, readable code
 - **Type-safe**: Compile-time checking with generics
 
+### Multiple screens and detachable tabs
+
+`MainForm.ScreenMode` defaults to `ScreenMode.SingleView`, which shows one screen without a tab bar. Set it to `ScreenMode.MultiView` to keep multiple screens open in titled tabs. `BlockMainForm` inherits this property and hosts the tabs in its main content panel.
+
+```csharp
+Sphere10Framework.Instance
+	.BuildWinFormsApplication()
+	.UseMainForm<BlockMainForm>(Form => Form.ScreenMode = ScreenMode.MultiView)
+	// Register the application's modules here.
+	.StartWinFormsApplication();
+
+var Block = new ApplicationBlockBuilder()
+	.WithName("Workspace")
+	.WithDefaultScreen<DashboardScreen>(title: "Dashboard")
+	.AddMenu(Menu => Menu.WithText("Views")
+		.AddScreenItem<DashboardScreen>("Dashboard")
+		.AddScreenItem<EditorScreen>("New editor", title: "Editor")
+		.ConfigureItem(Item => Item.AsScreenItem()
+			.WithText("New report")
+			.WithScreen<ReportScreen>()
+			.AsMultiInstance()
+			.WithTitle("Report")))
+	.Build();
+
+public class DashboardScreen : ApplicationScreen {
+	public DashboardScreen() => ActivationMode = ScreenActivationMode.SingleInstance;
+}
+
+public class EditorScreen : ApplicationScreen {
+	public EditorScreen() => ActivationMode = ScreenActivationMode.MultiInstance;
+}
+```
+
+Screen builders declare the type's instance policy with `.AsSingleInstance()` or `.AsMultiInstance()`. `SingleInstance` (the default) allows one instance of that type per host across all blocks and menu entries, including detached windows. `MultiInstance` allows a new independent instance on each menu activation. The host validates all explicit declarations for a block before opening its screens; an unspecified menu entry inherits any declaration for the same type. Conflicting declarations or changes to a resolved type policy are rejected, even after its last instance closes. Without a builder declaration, the screen's constructor supplies `ActivationMode` through its protected setter. The property cannot change while hosted. The former `KeepAlive` and `AlwaysCreate` names are now `SingleInstance` and `MultiInstance`, respectively.
+
+`ApplicationScreen.Title` uses the control's `Text` property. Menu navigation supplies the menu text as the initial title unless a specific builder title is provided. Screens can subsequently change `Title`; the tab and detached window update immediately. A block's default screen opens during registration if there is no active screen after its `ExecuteOnLoad` items have run.
+
+Tab widths grow with their titles up to `ApplicationScreenTabControl.MaximumTabWidth`, which defaults to 260 logical pixels. Longer titles display an ellipsis, with the full title available on hover. Tab spacing, close buttons, docking markers, and the width limit scale for the current monitor's DPI.
+
+Selecting a tab restores the previous screen's toolbar items and removes its screen menu, then merges the selected screen's `ToolBar` and registered `MenuItems` into the main form. The same item instances and event handlers are retained. When detached, `ApplicationScreenForm` displays the registered `MenuItems` directly as top-level menus, including File when supplied, regardless of `ShowInApplicationMenuStrip`. It retains the original `ToolBar` control, layout, and handlers instead of copying its items into a replacement strip. The selected docked screen continues to supply the main window's menu and toolbar. Redocking selects the returned tab and merges its items back into the main form.
+
+Detached windows use a compact caption with accessible **Re-dock**, **Minimize**, **Maximize/Restore**, and **Close** icon buttons. The title area supports native dragging and double-click maximize/restore, and the border remains resizable. Close and re-dock preserve the screen's cancellation checks. Only menus and toolbars supplied by the screen occupy space; a content-only screen starts immediately below the caption, without empty bars or a detached tab row.
+
+- Close a tab with its close button, middle-click, or its context menu.
+- Undock using the tab context menu, or drag the selected tab away from the tab headers and release.
+- Drag tabs along the tab bar to see them move immediately; Escape restores the original position.
+- In a detached window, use the caption's **Re-dock** icon, or bring the window's title bar close to the main tab strip. Only the header band accepts drag docking; the screen content panel does not. A highlighted tab-sized **Release to dock** preview and text hint show the proposed position and screen title without changing tab widths, order, or selection. The highlight uses the ExplorerBar palette and follows the visible navigation pane's blue in `BlockMainForm`. Leaving the target or cancelling the drag clears the preview.
+
+Collapse and restore the entire left navigation pane with the **sidebar icon** in the main toolbar, or **Ctrl+Alt+M**. The icon remains available across screen switches and supplies Show/Hide sidebar tooltips. It does not reserve a separate header or collapsed gutter. `BlockMainForm.NavigationPaneCollapsed` exposes the preference. The pane remembers its width and collapsed state across screen switches. Filled screens temporarily hide navigation without changing that preference.
+
+`MainForm.ScreenHost` exposes `ActivateScreen`, `ShowScreen`, `CloseScreen`, `CloseScreens`, `CanCloseScreens`, `UndockScreen`, `DockScreen`, `OpenScreens` and `Screens`. `ActiveScreen` identifies the selected docked screen; detached windows retain independent chrome. `Screens` also includes cached single-instance screens hidden in SingleView. `ActivateScreen` and menu navigation reuse an existing singleton. Direct `ShowScreen` calls reject a second singleton instance; the caller still owns a rejected instance. A screen belongs to one host at a time.
+
+SingleView retains hidden single-instance screens and disposes multi-instance screens when navigating away, preserving the previous behavior. Explicit close always destroys the instance; opening it again constructs a fresh screen. Switching from MultiView to SingleView closes other open screens and retains the selected tab. Use `ScreenHost.TrySetScreenMode` to handle cancellation without an exception; assigning `ScreenMode` throws if a screen vetoes the change.
+
+The existing `OnHide(ref bool CancelHide)` and `ScreenHidden` event can cancel navigation, close, undock, redock, block removal, and changes to SingleView. Batch close and mode changes check all affected screens before removing any. `ScreenDisplayedFirstTime` runs once per instance; `ScreenDisplayed` runs on each subsequent selection or hosting transition. Closing or disposing the host also disposes hidden and detached instances, with `ScreenDestroyed` raised once per instance.
+
+The reusable host follows `IApplicationScreenHost` → `ApplicationScreenHostBase` → `ApplicationScreenHost`, with `ApplicationScreenHostDecorator` for extensions. `ApplicationScreenTabControl` supplies the tab interactions and `ApplicationScreenForm` hosts detached screens.
+
+The **WinForms Tester** starts in MultiView and uses `HighDpiMode.DpiUnaware` so Windows bitmap-scales its existing screen and dialog layouts. Its **Screen hosting** menu uses `.AsSingleInstance()` for **Settings** and `.AsMultiInstance()` for **New design**, and offers both screen modes. These demos have independent notes, a counter, **Rename tab** actions, a lifecycle log, and a checkbox to exercise cancellation. **Plain screen (no bars)** exercises a screen with no menus or toolbar. See the [Tester instructions](../../utils/Sphere10.Framework.Utils.WinFormsTester/README.md). [SystemExpert](../../utils/SystemExpert/README.md) also uses MultiView, with a single instance of each monitoring tool.
+
+`Directory.Build.props` sets `ForceDesignerDPIUnaware=true` for the Visual Studio WinForms designer across the repository. This designer setting is separate from runtime DPI awareness. The library leaves runtime DPI policy to the application; Tester explicitly selects `HighDpiMode.DpiUnaware` before creating controls to preserve Windows bitmap scaling.
+
 ## 📦 Dependencies
 
 - **Sphere10.Framework**: Core framework
@@ -296,7 +360,7 @@ The builder pattern supports:
 ## ✅ Status & Compatibility
 
 - **Maturity**: Production-tested for Windows desktop applications
-- **.NET Target**: .NET 8.0+ (Windows), .NET Framework 4.7+ (legacy)
+- **.NET Target**: .NET 10.0 (Windows)
 - **Platform**: Windows only (Windows Forms)
 
 ## ⚖️ License

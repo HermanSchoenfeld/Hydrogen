@@ -8,6 +8,8 @@
 
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
+using System.Linq;
 using System.Drawing;
 using System.Windows.Forms;
 using System.Diagnostics;
@@ -21,8 +23,12 @@ namespace Sphere10.Framework.Windows.Forms;
 #warning Add plugin stuff to menus
 #warning Add restore mainform to lastsize
 
-
 public partial class BlockMainForm : MainForm, IBlockManager {
+	private readonly SidebarToggleButton _navigationPaneToggleButton;
+	private readonly (Color BackColor, Color ForeColor) _defaultDockPreviewColors;
+	private TaskPane? _navigationThemePane;
+	private bool _navigationPaneCollapsed;
+	private double _navigationPaneWidth;
 
 	#region Form activation/destruction
 
@@ -36,9 +42,25 @@ public partial class BlockMainForm : MainForm, IBlockManager {
 		ToolStripBindings = new Dictionary<ToolStripItem, IMenuItem>();
 		Plugins = new List<IApplicationBlock>();
 		ActivePlugin = null;
-		ActiveViewButtons = new List<ToolStripItem>();
-		ActiveScreen = null;
-		LongRunningScreens = new Dictionary<Type, ApplicationScreen>();
+		_navigationPaneWidth = _splitContainer.SplitterDistance;
+		_defaultDockPreviewColors = (ScreenHost.TabControl.DockPreviewBackColor, ScreenHost.TabControl.DockPreviewForeColor);
+		_applicationBar.ButtonPressed += NavigationSelectionChanged;
+		Disposed += NavigationThemeChanged;
+
+		_navigationPaneToggleButton = new SidebarToggleButton {
+			Name = "_navigationPaneToggleButton",
+			CheckOnClick = false,
+			Overflow = ToolStripItemOverflow.Never,
+			ToolTipText = "Hide sidebar (Ctrl+Alt+M)"
+		};
+		_navigationPaneToggleButton.Click += NavigationPaneToggle_Click;
+		ToolStrip.Items.Insert(0, _navigationPaneToggleButton);
+
+		// The SplitContainer owns the sidebar divider; no additional gutter is needed beside the content.
+		_splitter.Dispose();
+		_splitContainer.Panel2.Controls.Add(ScreenHost);
+		ScreenHost.BringToFront();
+
 	}
 
 	protected override void OnLoad(EventArgs e) {
@@ -52,11 +74,20 @@ public partial class BlockMainForm : MainForm, IBlockManager {
 
 	#region Properties
 
+	[DefaultValue(false), Category("Appearance"), Description("Collapse the navigation menu while preserving its width and current selection")]
+	public bool NavigationPaneCollapsed {
+		get => _navigationPaneCollapsed;
+		set {
+			if (_navigationPaneCollapsed == value)
+				return;
+			_navigationPaneCollapsed = value;
+			UpdateNavigationPane(ActiveScreen);
+		}
+	}
+
 	public IDictionary<IApplicationBlock, TaskPane> PluginBindings { get; set; }
 
 	public IApplicationBlock ActiveBlock { get; set; }
-
-	public ApplicationScreen ActiveScreen { get; set; }
 
 	public List<IApplicationBlock> Blocks { get; set; }
 
@@ -69,10 +100,6 @@ public partial class BlockMainForm : MainForm, IBlockManager {
 	private IList<IApplicationBlock> Plugins { get; set; }
 
 	private IApplicationBlock ActivePlugin { get; set; }
-
-	private List<ToolStripItem> ActiveViewButtons { get; set; }
-
-	private IDictionary<Type, ApplicationScreen> LongRunningScreens { get; set; }
 
 	#endregion
 
@@ -87,6 +114,7 @@ public partial class BlockMainForm : MainForm, IBlockManager {
 
 		#endregion
 
+		ScreenHost.RegisterScreenTypes(plugin);
 		this.Text = plugin.Name;
 
 		TaskPane taskPane = CreateApplicationBlockPane(plugin);
@@ -106,6 +134,7 @@ public partial class BlockMainForm : MainForm, IBlockManager {
 
 		Plugins.Add(plugin);
 		PluginBindings.Add(plugin, taskPane);
+		UpdateNavigationTheme();
 
 		if (ActiveBlock == null) {
 			ActiveBlock = plugin;
@@ -124,28 +153,38 @@ public partial class BlockMainForm : MainForm, IBlockManager {
 			}
 		}
 
+		if (ActiveScreen == null && plugin.DefaultScreen != null)
+			ScreenHost.ActivateScreen(plugin, plugin.DefaultScreen, plugin.DefaultScreenTitle);
 	}
 
-	public virtual void UnregisterBlock(IApplicationBlock plugin) {
-
-		#region Pre-conditions
-
-		Debug.Assert(plugin != null);
-		Debug.Assert(!PluginBindings.ContainsKey(plugin));
-
-		#endregion
-
-		try {
-			_splitContainer.Panel1.Controls.Remove(PluginBindings[plugin]);
-			DestroyPlugin(plugin, PluginBindings[plugin]);
-			PluginBindings.Remove(plugin);
-			plugin.Dispose();
-			RebuildToolBar();
-		} catch (Exception e) {
-			_ = ExceptionDialog.ShowAsync(e);
+	public virtual void UnregisterBlock(IApplicationBlock Block) {
+		Guard.ArgumentNotNull(Block, nameof(Block));
+		Guard.Argument(PluginBindings.ContainsKey(Block), nameof(Block), "Block is not registered");
+		if (!ScreenHost.CloseScreens(ScreenHost.Screens.Where(Screen => ReferenceEquals(Screen.ApplicationBlock, Block))))
+			return;
+		foreach (var Binding in MenuItemBindings.Where(Pair => ReferenceEquals(Pair.Value.Parent.Parent, Block)).ToArray()) {
+			MenuItemBindings.Remove(Binding.Key);
+			Binding.Key.Dispose();
 		}
+		foreach (var Binding in ToolStripBindings.Where(Pair => ReferenceEquals(Pair.Value.Parent.Parent, Block)).ToArray()) {
+			ToolStripBindings.Remove(Binding.Key);
+			Binding.Key.Dispose();
+		}
+		foreach (var Item in MenuStrip.Items.Cast<ToolStripItem>().Where(Item => ReferenceEquals(Item.Tag, Block)).ToArray())
+			Item.Dispose();
+		foreach (var Item in _applicationBar.Items.Where(Item => ReferenceEquals(Item.MenuControl, PluginBindings[Block])))
+			_applicationBar.RemoveItem(Item);
+		foreach (var Menu in Block.Menus)
+			MenuBindings.Remove(Menu);
+		PluginBindings[Block].Dispose();
+		PluginBindings.Remove(Block);
+		Plugins.Remove(Block);
+		UpdateNavigationTheme();
+		if (ReferenceEquals(ActiveBlock, Block))
+			ActiveBlock = ActiveScreen?.ApplicationBlock ?? Plugins.FirstOrDefault();
+		Block.Dispose();
+		RebuildToolBar();
 	}
-
 	public virtual bool IsBlockRegistered(IApplicationBlock plugin) {
 
 		#region Pre-conditions
@@ -175,12 +214,9 @@ public partial class BlockMainForm : MainForm, IBlockManager {
 		}
 	}
 
-	private void ExecuteViewMenuItem(IScreenMenuItem viewItem) {
-		ShowScreen(
-			ConstructScreen(viewItem.Parent.Parent, viewItem.Screen)
-		);
-		ExecuteLinkMenuItem(viewItem);
-
+	private void ExecuteViewMenuItem(IScreenMenuItem ViewItem) {
+		if (ScreenHost.ActivateScreen(ViewItem.Parent.Parent, ViewItem.Screen, ViewItem.ScreenTitle ?? ViewItem.Text) != null)
+			ExecuteLinkMenuItem(ViewItem);
 	}
 
 	private void ExecuteLinkMenuItem(ILinkMenuItem linkItem) {
@@ -297,54 +333,6 @@ public partial class BlockMainForm : MainForm, IBlockManager {
 		return taskPane;
 	}
 
-	private void DestroyControlMenuItem(IControlMenuItem item) {
-		throw new NotImplementedException();
-	}
-
-	private void DestroyViewMenuItem(IScreenMenuItem item) {
-		throw new NotImplementedException();
-	}
-
-	private void DestroyLinkMenuItem(ILinkMenuItem item) {
-		throw new NotImplementedException();
-	}
-
-	private void DestroyMenuItem(IMenuItem item) {
-
-		#region Pre-conditions
-
-		Debug.Assert(item != null);
-
-		#endregion
-
-		if (item is IControlMenuItem) {
-			DestroyControlMenuItem(item as IControlMenuItem);
-		} else if (item is IScreenMenuItem) {
-			DestroyViewMenuItem(item as IScreenMenuItem);
-		} else if (item is ILinkMenuItem) {
-			DestroyLinkMenuItem(item as ILinkMenuItem);
-		}
-	}
-
-	private void DestroyMenu(IMenu menu, Expando expando) {
-		foreach (IMenuItem item in menu.Items) {
-			if (item.ShowOnExplorerBar) {
-				DestroyMenuItem(item);
-			}
-		}
-
-		expando.Dispose();
-	}
-
-	private void DestroyPlugin(IApplicationBlock plugin, TaskPane taskPane) {
-		foreach (IMenu menu in plugin.Menus) {
-			DestroyMenu(menu, MenuBindings[menu]);
-			MenuBindings.Remove(menu);
-		}
-		taskPane.Dispose();
-		// remove link from explorer bar
-	}
-
 	private void TaskItem_Clicked(object sender, EventArgs e) {
 		if (sender is TaskItem) {
 			TaskItem taskItem = sender as TaskItem;
@@ -378,6 +366,8 @@ public partial class BlockMainForm : MainForm, IBlockManager {
 			block.Name
 		);
 
+		blockHeader.Tag = block;
+
 		// register each menu in block
 		foreach (IMenu menu in block.Menus) {
 
@@ -409,29 +399,6 @@ public partial class BlockMainForm : MainForm, IBlockManager {
 		InsertMenuItemBeforeHelpMenu(blockHeader);
 	}
 
-	private void RegisterScreenInMenu(ApplicationScreen screen) {
-		ToolStripMenuItem headerMenu = new ToolStripMenuItem(
-			screen.ApplicationMenuStripText
-		);
-		headerMenu.Tag = screen;
-		foreach (ToolStripItem menuItem in screen.MenuItems) {
-			headerMenu.DropDownItems.Add(
-				menuItem
-			);
-		}
-
-		InsertMenuItemBeforeHelpMenu(headerMenu);
-	}
-
-	private void UnregisterScreenFromMenu(ApplicationScreen screen) {
-		for (int i = 0; i < MenuStrip.Items.Count; i++) {
-			if (MenuStrip.Items[i].Tag == screen) {
-				MenuStrip.Items.RemoveAt(i);
-				break;
-			}
-		}
-	}
-
 	private void ToolStripItemActivate(object sender, EventArgs e) {
 		if (sender is ToolStripItem) {
 			ToolStripItem stripItem = sender as ToolStripItem;
@@ -445,10 +412,21 @@ public partial class BlockMainForm : MainForm, IBlockManager {
 	}
 
 	private void RebuildToolBar() {
+		RestoreScreenToolBar();
 		ToolStrip.SuspendLayout();
+		using var Layout = Tools.Scope.ExecuteOnDispose(() => ToolStrip.ResumeLayout());
+		ToolStrip.Items.Remove(_navigationPaneToggleButton);
+		foreach (var Item in ToolStripBindings.Keys.Where(Item => Item.Owner == ToolStrip).ToArray()) {
+			ToolStripBindings.Remove(Item);
+			Item.Dispose();
+		}
+		foreach (ToolStripItem Item in ToolStrip.Items.Cast<ToolStripItem>().ToArray())
+			Item.Dispose();
 		ToolStrip.Items.Clear();
 
 		#region Add standard buttons
+
+		ToolStrip.Items.Add(_navigationPaneToggleButton);
 
 		#endregion
 
@@ -484,37 +462,7 @@ public partial class BlockMainForm : MainForm, IBlockManager {
 
 		#endregion
 
-		#region Add active screen buttons
-
-		if (ActiveScreen != null) {
-			if (ActiveScreen.ToolBar != null) {
-				if (ToolStrip.Items.Count > 0) {
-					ToolStrip.Items.Add(new ToolStripSeparator());
-
-				}
-
-				int buttonCount = ActiveScreen.ToolBar.Items.Count;
-				ActiveViewButtons.Clear();
-				for (int i = 0; i < buttonCount; i++) {
-					ActiveViewButtons.Add(
-						ActiveScreen.ToolBar.Items[i]
-					);
-				}
-				if (ActiveScreen.ToolBar.Tag == null) {
-					foreach (Control ctrl in ActiveScreen.Controls) {
-						ctrl.Location = new Point(
-							ctrl.Location.X,
-							ctrl.Location.Y - ActiveScreen.ToolBar.Height
-						);
-					}
-					ActiveScreen.ToolBar.Visible = false;
-					ActiveScreen.ToolBar.Tag = "Removed";
-				}
-				ToolStrip.Items.AddRange(ActiveViewButtons.ToArray());
-			}
-		}
-
-		#endregion
+		MergeScreenToolBar();
 
 		#region Add help buttons
 
@@ -529,7 +477,6 @@ public partial class BlockMainForm : MainForm, IBlockManager {
 
 		#endregion
 
-		ToolStrip.ResumeLayout();
 	}
 
 	private void InsertMenuItemBeforeHelpMenu(ToolStripMenuItem menuItem) {
@@ -552,157 +499,51 @@ public partial class BlockMainForm : MainForm, IBlockManager {
 
 	#region Screen management
 
-	private ApplicationScreen ConstructScreen(IApplicationBlock owner, Type screenType) {
-
-		#region Pre-conditions
-
-		Debug.Assert(owner != null);
-		Debug.Assert(screenType != null);
-		Debug.Assert(screenType.IsSubclassOf(typeof(ApplicationScreen)));
-
-		#endregion
-
-		ApplicationScreen screen = null;
-		if (LongRunningScreens.ContainsKey(screenType)) {
-			screen = LongRunningScreens[screenType];
-		} else {
-			try {
-				// try to create with parameters
-				screen = Activator.CreateInstance(screenType, owner, this) as ApplicationScreen;
-			} catch (MissingMethodException) {
-				try {
-					// try to create with just block parameter
-					screen = Activator.CreateInstance(screenType, owner) as ApplicationScreen;
-				} catch (MissingMethodException) {
-					// try to create without parameters
-					screen = Activator.CreateInstance(screenType) as ApplicationScreen;
-				}
-			}
-
-			#region Validate
-
-			if (screen == null) {
-				throw new ApplicationException(
-					string.Format(
-						"Could not instantiate the screen of type '{0}' as it did not inherit from '{1}'.",
-						screenType.Name,
-						typeof(ApplicationScreen).Name
-					)
-				);
-			}
-
-			#endregion
-
-			// set screen context if activation did not do so
-			//if (screen.WinFormsWinFormsApplicationProvider == null) {
-			//    screen.WinFormsWinFormsApplicationProvider = base.WinFormsWinFormsApplicationProvider;
-			//}
-			if (screen.ApplicationBlock == null) {
-				screen.ApplicationBlock = owner;
-			}
-			// add this screen to long running screens if it is not to be destroyed.
-			if (screen.ActivationMode == ScreenActivationMode.KeepAlive) {
-				LongRunningScreens.Add(screenType, screen);
-			}
+	protected override void OnActiveScreenChanged(ApplicationScreen? Screen) {
+		if (Screen != null) {
+			ActiveBlock = Screen.ApplicationBlock;
+			if (Screen.DisplayMode == ScreenDisplayMode.Maximized || Screen.DisplayMode == ScreenDisplayMode.FilledAndMaximized)
+				WindowState = FormWindowState.Maximized;
 		}
-
-
-		#region Post-conditions
-
-		Debug.Assert(screen != null);
-
-		#endregion
-
-		return screen;
-
+		UpdateNavigationPane(Screen);
+		RebuildToolBar();
+		base.OnActiveScreenChanged(Screen);
 	}
 
-	private void ShowScreen(ApplicationScreen screen) {
-
-		#region Pre-conditions
-
-		Debug.Assert(screen != null);
-
-		#endregion
-
-		var cancelRemove = false;
-
-		// notify current view for permission to remove
-		ActiveScreen?.NotifyHideScreen(ref cancelRemove);
-
-		// remove if current view granted permission
-		if (!cancelRemove) {
-			_splitContainer.Panel2.SuspendLayout();
-
-			// remove the view toolbar items if any
-			if (ActiveScreen != null) {
-				UnregisterScreenFromMenu(ActiveScreen);
-				// put the tool buttons back into the screen toolbar
-				ActiveScreen.ToolBar?.Items.AddRange(ActiveViewButtons.ToArray());
-				ActiveViewButtons.Clear();
-
-				// remove the view control
-				if (_splitContainer.Panel2.Controls.Contains(ActiveScreen)) {
-					_splitContainer.Panel2.Controls.Remove(ActiveScreen);
-				}
-				// dispose view and release its resources
-				if (ActiveScreen.ActivationMode == ScreenActivationMode.AlwaysCreate) {
-					ActiveScreen.Dispose();
-				}
-			}
-
-			// collapse menu if new screen demands it
-			bool collapseMenu =
-				screen.DisplayMode == ScreenDisplayMode.Filled ||
-				screen.DisplayMode == ScreenDisplayMode.FilledAndMaximized;
-			_splitContainer.Panel1Collapsed = collapseMenu;
-
-			// maximize if new screen demands it
-			bool maximize =
-				screen.DisplayMode == ScreenDisplayMode.FilledAndMaximized ||
-				screen.DisplayMode == ScreenDisplayMode.Maximized;
-			if (maximize) {
-				base.WindowState = FormWindowState.Maximized;
-			}
-
-			// place the new view in the content panel
-			screen.Dock = DockStyle.Fill;
-			screen.Location = new Point(0, 0);
-			screen.Name = "VIEW";
-			screen.TabIndex = 0;
-			screen.Location = new Point(
-				_splitContainer.Panel2.Padding.Left,
-				_splitContainer.Panel2.Padding.Top
-			);
-			Size newSize = new Size(
-				_splitContainer.Width -
-				(_splitContainer.SplitterDistance + _splitContainer.SplitterWidth) -
-				(_splitContainer.Panel2.Padding.Left + _splitContainer.Panel2.Padding.Right),
-				_splitContainer.Height -
-				(_splitContainer.Panel2.Padding.Top + _splitContainer.Panel2.Padding.Bottom)
-			);
-			if (collapseMenu) {
-				newSize.Width = newSize.Width + _splitContainer.SplitterDistance;
-			}
-			;
-			screen.Size = newSize;
-			screen.PerformLayout();
-			_splitContainer.Panel2.Controls.Add(screen);
-			_splitContainer.Panel2.ResumeLayout(false);
-
-			// set current view sa the active view
-			ActiveScreen = screen;
-
-			// place new tool strip items
-			if (ActiveScreen.ShowInApplicationMenuStrip) {
-				RegisterScreenInMenu(ActiveScreen);
-			}
-			RebuildToolBar();
-
-			// let view know that it has begun
-			ActiveScreen.NotifyShow();
+	protected override bool ProcessCmdKey(ref Message Message, Keys KeyData) {
+		if (KeyData == (Keys.Control | Keys.Alt | Keys.M) && ActiveScreen?.DisplayMode is not (ScreenDisplayMode.Filled or ScreenDisplayMode.FilledAndMaximized)) {
+			NavigationPaneCollapsed = !NavigationPaneCollapsed;
+			return true;
 		}
+		return base.ProcessCmdKey(ref Message, KeyData);
 	}
+
+	protected override void RescaleConstantsForDpi(int DeviceDpiOld, int DeviceDpiNew) {
+		base.RescaleConstantsForDpi(DeviceDpiOld, DeviceDpiNew);
+		// WinForms scales the splitter itself; the remembered width also needs to follow monitor changes while hidden.
+		_navigationPaneWidth *= (double)DeviceDpiNew / DeviceDpiOld;
+	}
+
+	private void UpdateNavigationPane(ApplicationScreen? Screen) {
+		var ScreenFillsWindow = Screen?.DisplayMode is ScreenDisplayMode.Filled or ScreenDisplayMode.FilledAndMaximized;
+		var Collapsed = NavigationPaneCollapsed || ScreenFillsWindow;
+		_splitContainer.SuspendLayout();
+		using var LayoutScope = Tools.Scope.ExecuteOnDispose(() => _splitContainer.ResumeLayout(true));
+		if (_splitContainer.Panel1Collapsed != Collapsed) {
+			if (Collapsed)
+				_navigationPaneWidth = _splitContainer.SplitterDistance;
+			_splitContainer.Panel1Collapsed = Collapsed;
+			if (!Collapsed) {
+				var MaximumWidth = Math.Max(_splitContainer.Panel1MinSize, _splitContainer.Width - _splitContainer.SplitterWidth - _splitContainer.Panel2MinSize);
+				_splitContainer.SplitterDistance = Tools.Values.ClipValue((int)Math.Round(_navigationPaneWidth), _splitContainer.Panel1MinSize, MaximumWidth);
+			}
+		}
+		_navigationPaneToggleButton.Checked = !Collapsed;
+		_navigationPaneToggleButton.Enabled = !ScreenFillsWindow;
+		_navigationPaneToggleButton.ToolTipText = $"{_navigationPaneToggleButton.Text} (Ctrl+Alt+M)";
+	}
+
+	private void NavigationPaneToggle_Click(object? Sender, EventArgs Args) => NavigationPaneCollapsed = !NavigationPaneCollapsed;
 
 	#endregion
 
@@ -736,7 +577,43 @@ public partial class BlockMainForm : MainForm, IBlockManager {
 
 	#endregion
 
-	#region ApplicationBar Handlres
+	#region ApplicationBar Handlers
+
+	private void NavigationSelectionChanged(ApplicationBar Source, ApplicationBar.Item Button) => UpdateNavigationTheme();
+
+	private void NavigationThemeChanged(object? Sender, EventArgs Args) => UpdateNavigationTheme();
+
+	private void UpdateNavigationTheme() {
+		var Pane = !IsDisposed && !Disposing ? _applicationBar.ApplicationBarControl as TaskPane : null;
+		if (Pane?.IsDisposed == true)
+			Pane = null;
+		if (!ReferenceEquals(_navigationThemePane, Pane)) {
+			if (_navigationThemePane != null) {
+				_navigationThemePane.CustomSettingsChanged -= NavigationThemeChanged;
+				_navigationThemePane.BackColorChanged -= NavigationThemeChanged;
+			}
+			_navigationThemePane = Pane;
+			if (Pane != null) {
+				Pane.CustomSettingsChanged += NavigationThemeChanged;
+				Pane.BackColorChanged += NavigationThemeChanged;
+			}
+		}
+		if (IsDisposed || Disposing || ScreenHost.IsDisposed)
+			return;
+		var BackColor = Pane?.GradientStartColor ?? _defaultDockPreviewColors.BackColor;
+		ScreenHost.TabControl.DockPreviewBackColor = BackColor;
+		ScreenHost.TabControl.DockPreviewForeColor = Pane == null ? _defaultDockPreviewColors.ForeColor : GetNavigationThemeForeColor(BackColor);
+	}
+
+	private static Color GetNavigationThemeForeColor(Color BackColor) {
+		// Choose whichever text color has greater contrast against the pane's actual background.
+		static double Linearize(byte Channel) {
+			var Value = Channel / 255.0;
+			return Value <= 0.04045 ? Value / 12.92 : Math.Pow((Value + 0.055) / 1.055, 2.4);
+		}
+		var Luminance = 0.2126 * Linearize(BackColor.R) + 0.7152 * Linearize(BackColor.G) + 0.0722 * Linearize(BackColor.B);
+		return (Luminance + 0.05) / 0.05 >= 1.05 / (Luminance + 0.05) ? Color.Black : Color.White;
+	}
 
 	private void _applicationBar_ButtonPressed(ApplicationBar source, ApplicationBar.Item button) {
 		// purpose here is to set ActivePlugin to current Plugin visible in application bar
@@ -760,4 +637,3 @@ public partial class BlockMainForm : MainForm, IBlockManager {
 	#endregion
 
 }
-

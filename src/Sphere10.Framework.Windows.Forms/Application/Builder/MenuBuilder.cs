@@ -40,16 +40,19 @@ public class MenuBuilder {
 		return this;
 	}
 
-	public MenuBuilder AddScreenItem(string text, Type screenType, Image image16x16 = null, bool showOnExplorerBar = true, bool showOnToolBar = true, bool isStartScreen = false) {
+	public MenuBuilder AddScreenItem(string text, Type screenType, Image image16x16 = null, bool showOnExplorerBar = true, bool showOnToolBar = true, bool isStartScreen = false,
+		string? title = null) {
 		Guard.ArgumentNotNull(text, nameof(text));
 		Guard.ArgumentNotNull(screenType, nameof(screenType));
-		var item = new ScreenMenuItem(text, screenType, image16x16, showOnExplorerBar, showOnToolBar, isStartScreen);
+		Guard.Argument(typeof(ApplicationScreen).IsAssignableFrom(screenType) && !screenType.IsAbstract, nameof(screenType), "A concrete ApplicationScreen type is required");
+		var item = new ScreenMenuItem(text, screenType, image16x16, showOnExplorerBar, showOnToolBar, isStartScreen) { ScreenTitle = title };
 		_menu.AddItem(item);
 		return this;
 	}
 
-	public MenuBuilder AddScreenItem<TScreen>(string text, Image image16x16 = null, bool showOnExplorerBar = true, bool showOnToolBar = true, bool isStartScreen = false) {
-		return AddScreenItem(text, typeof(TScreen), image16x16, showOnExplorerBar, showOnToolBar, isStartScreen);
+	public MenuBuilder AddScreenItem<TScreen>(string text, Image image16x16 = null, bool showOnExplorerBar = true, bool showOnToolBar = true, bool isStartScreen = false,
+		string? title = null) where TScreen : ApplicationScreen {
+		return AddScreenItem(text, typeof(TScreen), image16x16, showOnExplorerBar, showOnToolBar, isStartScreen, title);
 	}
 
 	public MenuBuilder AddActionItem(string text, Action action, Image image16x16 = null, bool showOnExplorerBar = true, bool showOnToolBar = true, bool executeOnLoad = false) {

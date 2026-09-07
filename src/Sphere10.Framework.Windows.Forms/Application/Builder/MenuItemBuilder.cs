@@ -39,6 +39,8 @@ public class MenuItemBuilder {
 		private bool _showOnExplorerBar = true;
 		private bool _showOnToolBar = true;
 		private bool _isStartScreen = false;
+		private ScreenActivationMode? _activationMode;
+		private string? _title;
 
 		public ScreenMenuItemBuilder WithText(string text) {
 			_text = text;
@@ -46,12 +48,31 @@ public class MenuItemBuilder {
 		}
 
 		public ScreenMenuItemBuilder WithScreen(Type screenType) {
+			Guard.ArgumentNotNull(screenType, nameof(screenType));
+			Guard.Argument(typeof(ApplicationScreen).IsAssignableFrom(screenType) && !screenType.IsAbstract, nameof(screenType), "A concrete ApplicationScreen type is required");
 			_screenType = screenType;
 			return this;
 		}
 
-		public ScreenMenuItemBuilder WithScreen<TScreen>() {
-			_screenType = typeof(TScreen);
+		public ScreenMenuItemBuilder WithScreen<TScreen>() where TScreen : ApplicationScreen {
+			return WithScreen(typeof(TScreen));
+		}
+
+		/// <summary>Declares one instance for this screen type across all of the host's blocks and menus.</summary>
+		public ScreenMenuItemBuilder AsSingleInstance() {
+			_activationMode = ScreenActivationMode.SingleInstance;
+			return this;
+		}
+
+		/// <summary>Declares that every activation of this screen type creates a new instance.</summary>
+		public ScreenMenuItemBuilder AsMultiInstance() {
+			_activationMode = ScreenActivationMode.MultiInstance;
+			return this;
+		}
+
+		public ScreenMenuItemBuilder WithTitle(string Title) {
+			Guard.ArgumentNotNullOrEmpty(Title, nameof(Title));
+			_title = Title;
 			return this;
 		}
 
@@ -78,7 +99,10 @@ public class MenuItemBuilder {
 		internal ScreenMenuItem Build() {
 			Guard.Ensure(!string.IsNullOrEmpty(_text), "Screen menu item text is required");
 			Guard.Ensure(_screenType != null, "Screen type is required");
-			return new ScreenMenuItem(_text, _screenType, _image16x16, _showOnExplorerBar, _showOnToolBar, _isStartScreen);
+			return new ScreenMenuItem(_text, _screenType, _image16x16, _showOnExplorerBar, _showOnToolBar, _isStartScreen) {
+				ActivationMode = _activationMode,
+				ScreenTitle = _title
+			};
 		}
 	}
 
