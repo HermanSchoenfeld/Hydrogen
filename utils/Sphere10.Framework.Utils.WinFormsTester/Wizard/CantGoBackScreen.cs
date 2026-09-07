@@ -15,13 +15,8 @@ public partial class CantGoBackScreen : DemoWizardScreenBase {
 		InitializeComponent();
 	}
 
-	public override async Task Initialize() {
+	public override async Task OnPresent() {
+		await base.OnPresent();
+		Wizard.HidePrevious = true;
 	}
-
-	public override async Task<Result> Validate() {
-		return Result.Success;
-	}
-
 }
-
-

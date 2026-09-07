@@ -21,6 +21,9 @@ public class CrudGridColumn<TEntity> : ICrudGridColumn {
 	public CrudCellDisplayType DisplayType { get; set; }
 	public Type DataType { get; set; }
 	public string SortName { get; set; }
+	public string? PropertyName { get; set; }
+	public CrudReferenceBinding? ReferenceBinding { get; set; }
+	/// <summary>Uses spare grid width for this column while retaining its content width as the minimum.</summary>
 	public bool ExpandsToFit { get; set; }
 	public bool CanEditCell { get; set; }
 	public Func<TEntity, bool> PropertyHasValue { get; set; }
@@ -99,4 +102,3 @@ public class CrudGridColumn<TEntity> : ICrudGridColumn {
 
 
 }
-

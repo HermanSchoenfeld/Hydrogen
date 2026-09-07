@@ -126,16 +126,30 @@ public class MainFormExitTests {
 		await WaitUntil(() => Form.IsDisposed);
 	});
 
-	[Test]
-	public void StartupMessageLoopEndsAndFinalizesFrameworkAfterMainFormCloses() {
+	[TestCase(false)]
+	[TestCase(true)]
+	public void StartupMessageLoopEndsAndFinalizesFrameworkAfterMainFormCloses(bool PersistWindowSettings) {
 		Assert.That(Sphere10Framework.Instance.IsStarted, Is.False);
+		using var ProviderScope = UseTemporarySettings(out var Directory);
+		var SettingsProvider = new ShutdownProbeSettingsProvider(Directory);
+		UserSettings.Provider = SettingsProvider;
 		Exception? Failure = null;
 		ExitProbeMainForm? MainForm = null;
 		var Finalized = false;
+		var Finalizing = false;
+		var SavedDuringShutdown = false;
+		var ClosedBeforeSave = false;
+		SettingsProvider.Saving = () => {
+			SavedDuringShutdown = Finalizing;
+			ClosedBeforeSave = MainForm?.IsDisposed == true;
+		};
+		void FrameworkFinalizing() => Finalizing = true;
 		void FrameworkFinalized() => Finalized = MainForm?.IsDisposed == true;
 		Sphere10Framework.Instance.Finalized += FrameworkFinalized;
+		Sphere10Framework.Instance.Finalizing += FrameworkFinalizing;
 		using var Cleanup = Tools.Scope.ExecuteOnDispose(() => {
 			Sphere10Framework.Instance.Finalized -= FrameworkFinalized;
+			Sphere10Framework.Instance.Finalizing -= FrameworkFinalizing;
 			if (Sphere10Framework.Instance.IsStarted)
 				Sphere10Framework.Instance.EndFramework();
 		});
@@ -167,13 +181,88 @@ public class MainFormExitTests {
 		};
 		RequestExit.Start();
 		Sphere10Framework.Instance.BuildWinFormsApplication()
-			.ConfigureServices(Services => Services.AddSingleton<IProductUsageServices, ProbeUsageServices>())
-			.UseMainForm<ExitProbeMainForm>(Form => MainForm = Form)
+			.ConfigureServices(Services => {
+				Services.AddSingleton<IProductUsageServices, ProbeUsageServices>();
+				Services.AddSingleton<ShutdownProbeSettingsProvider>(_ => SettingsProvider);
+			})
+			.UseMainFormSettings(PersistWindowSettings)
+			.UseMainForm<ExitProbeMainForm>(Form => {
+				MainForm = Form;
+				Sphere10Framework.Instance.ServiceProvider.GetRequiredService<ShutdownProbeSettingsProvider>();
+			})
 			.StartWinFormsApplication();
 		Assert.That(Failure, Is.Null, Failure?.ToString());
 		Assert.That(MainForm?.IsDisposed, Is.True);
 		Assert.That(Sphere10Framework.Instance.IsStarted, Is.False);
 		Assert.That(Finalized, Is.True, "Framework services must be disposed after the main form completes its close lifecycle.");
+		Assert.That(SettingsProvider.SaveCount, Is.EqualTo(PersistWindowSettings ? 1 : 0));
+		Assert.That(SettingsProvider.Disposed, Is.True);
+		Assert.That(SettingsProvider.SavedAfterDisposal, Is.False);
+		if (PersistWindowSettings) {
+			Assert.That(SavedDuringShutdown && ClosedBeforeSave, Is.True, "Placement must be written by framework finalization after the main form closes.");
+			Assert.That(new DirectoryFileSettingsProvider(Directory).ContainsSetting(typeof(FormWindowSettings), "MainForm"), Is.True);
+		}
+	}
+
+	[Test]
+	public void WindowSettingsWaitForConfirmedExitAndScreenVetoApproval() => RunWithMessageLoop(async Form => {
+		using var ProviderScope = UseTemporarySettings(out var Directory);
+
+		using var SettingsScope = Tools.WinForms.AutoPersistWindowSettings(Form);
+		using var Screen = new ExitProbeScreen { CancelHide = true };
+		Form.ShowScreen(Screen);
+		Form.RequestClose(true);
+		using var FirstConfirmation = await WaitForConfirmation();
+		Assert.That(UserSettings.Has<FormWindowSettings>("MainForm"), Is.False, "The pending confirmation must not save placement.");
+		Answer(FirstConfirmation, true);
+		await WaitUntil(() => !Form.ApplicationExiting);
+		Assert.That(UserSettings.Has<FormWindowSettings>("MainForm"), Is.False, "A screen veto must not save placement.");
+		Screen.CancelHide = false;
+		var ExpectedBounds = Form.Bounds;
+		Form.RequestClose(true);
+		using var SecondConfirmation = await WaitForConfirmation();
+		Answer(SecondConfirmation, true);
+		await WaitUntil(() => Form.IsDisposed);
+		ISettingsProvider FreshProvider = new DirectoryFileSettingsProvider(Directory);
+		Assert.That(FreshProvider.Get<FormWindowSettings>("MainForm").Bounds, Is.EqualTo(ExpectedBounds));
+	});
+
+	[TestCase(false)]
+	[TestCase(true)]
+	public void MainWindowRestoresThePersistedExpandedSidebarWidth(bool CollapsedWhenClosed) => RunWithMessageLoop(async Form => {
+		using var ProviderScope = UseTemporarySettings(out var Directory);
+		using var SettingsScope = Tools.WinForms.AutoPersistWindowSettings(Form);
+		Form.NavigationPaneWidth = 390;
+		Form.NavigationPaneCollapsed = CollapsedWhenClosed;
+		var Owner = Form.Owner;
+		Form.RequestClose(true);
+		using var Confirmation = await WaitForConfirmation();
+		Answer(Confirmation, true);
+		await WaitUntil(() => Form.IsDisposed);
+		UserSettings.Provider = new DirectoryFileSettingsProvider(Directory);
+		using var Restored = new ExitProbeMainForm();
+		using var RestoreSettings = Tools.WinForms.AutoPersistWindowSettings(Restored);
+		Restored.Show(Owner);
+		Assert.That(Restored.NavigationPaneWidth, Is.EqualTo(390));
+		Assert.That(Restored.NavigationPaneCollapsed, Is.False, "Placement persistence does not change the application's collapsed-state default.");
+	});
+
+	private static IDisposable UseTemporarySettings(out string Directory) {
+		ISettingsProvider? PreviousProvider = null;
+		try {
+			PreviousProvider = UserSettings.Provider;
+		} catch (InvalidOperationException) {
+			// Exit tests can run with only usage services registered, without the settings application module.
+		}
+		Directory = Tools.FileSystem.GetTempEmptyDirectory();
+		Guard.Ensure(System.IO.Path.GetFullPath(Directory).StartsWith(System.IO.Path.GetFullPath(System.IO.Path.GetTempPath()), StringComparison.OrdinalIgnoreCase),
+			"Settings test directory must be temporary.");
+		var SettingsDirectory = Directory;
+		UserSettings.Provider = new DirectoryFileSettingsProvider(Directory);
+		return Tools.Scope.ExecuteOnDispose(() => {
+			UserSettings.Provider = PreviousProvider!;
+			Tools.FileSystem.DeleteDirectory(SettingsDirectory);
+		});
 	}
 
 	private static void Answer(DialogEx Confirmation, bool Yes)
@@ -206,6 +295,7 @@ public class MainFormExitTests {
 				Sphere10Framework.Instance.EndFramework();
 		});
 		Exception? Failure = null;
+		var Completed = false;
 		var PreviousContext = SynchronizationContext.Current;
 		using var UiContext = new WindowsFormsSynchronizationContext();
 		using var RestoreContext = Tools.Scope.ExecuteOnDispose(() => SynchronizationContext.SetSynchronizationContext(PreviousContext));
@@ -227,6 +317,7 @@ public class MainFormExitTests {
 			try {
 				MainForm.Show(Owner);
 				await Test(MainForm);
+				Completed = true;
 			} catch (Exception Error) {
 				Failure = Error;
 			}
@@ -234,6 +325,7 @@ public class MainFormExitTests {
 		Watchdog.Start();
 		WinFormsApplication.Run(Owner);
 		Assert.That(Failure, Is.Null, Failure?.ToString());
+		Assert.That(Completed, Is.True, "The message loop must run the asynchronous exit test to completion.");
 	}
 
 	private sealed class ExitProbeScreen : ApplicationScreen {
@@ -274,6 +366,26 @@ public class MainFormExitTests {
 			ExitCheckCount++;
 			base.OnApplicationExiting(Args);
 		}
+	}
+
+	private sealed class ShutdownProbeSettingsProvider : DirectoryFileSettingsProvider, IDisposable {
+		public ShutdownProbeSettingsProvider(string Directory)
+			: base(Directory) {
+		}
+
+		public Action? Saving { get; set; }
+		public int SaveCount { get; private set; }
+		public bool Disposed { get; private set; }
+		public bool SavedAfterDisposal { get; private set; }
+
+		public override void SaveSetting(SettingsObject Settings) {
+			SaveCount++;
+			SavedAfterDisposal |= Disposed;
+			Saving?.Invoke();
+			base.SaveSetting(Settings);
+		}
+
+		public void Dispose() => Disposed = true;
 	}
 
 	private sealed class ProbeUsageServices : IProductUsageServices {

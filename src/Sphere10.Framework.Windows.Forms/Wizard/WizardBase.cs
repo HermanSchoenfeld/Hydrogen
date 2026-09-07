@@ -115,8 +115,10 @@ public abstract class WizardBase<T> : SyncDisposable, IWizard<T> {
 		_dialog.WizardManager = this;
 		_currentScreenIndex = 0;
 		_started = true;
-		foreach (var screen in _screens.Value)
-			await screen.Initialize();
+		foreach (var Screen in _screens.Value) {
+			Screen.Wizard = this;
+			await Screen.Initialize();
+		}
 		var maxWidth = _screens.Value.Max(x => x.Size.Width);
 		var maxHeight = _screens.Value.Max(x => x.Size.Height);
 		_dialog.Size = new Size(maxWidth, maxHeight) + _dialog.DialogSizeOverhead;
@@ -162,6 +164,7 @@ public abstract class WizardBase<T> : SyncDisposable, IWizard<T> {
 
 	public async Task InjectScreen(WizardScreen<T> screen) {
 		CheckStarted();
+		screen.Wizard = this;
 		await screen.Initialize();
 		_screens.Value.Insert(_currentScreenIndex + 1, screen);
 		NextText = !HasNext ? _finishText : _nextText;

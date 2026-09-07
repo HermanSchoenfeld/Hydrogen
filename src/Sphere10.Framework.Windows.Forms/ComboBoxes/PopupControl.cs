@@ -191,6 +191,7 @@ public class PopupDropDown : ToolStripDropDown {
 		Control hostedControl = GetHostedControl();
 		if (hostedControl == null)
 			return;
+		_anchorBounds = new Rectangle(x, y - Math.Max(0, height), Math.Max(0, width), Math.Max(0, height));
 
 		// Initially hosted control should be displayed within a drop down of 1x1, however
 		// its size should exceed the dimensions of the drop-down.
@@ -214,20 +215,6 @@ public class PopupDropDown : ToolStripDropDown {
 		if (m_refreshSize)
 			RecalculateHostedControlLayout();
 
-		// If popup is overlapping the initial position then move above!
-		if (y > Top && y <= Bottom) {
-			Top = y - Height - (height != -1 ? height : 0);
-
-			PopupResizeMode previous = ResizeMode;
-			if (ResizeMode == PopupResizeMode.BottomLeft)
-				ResizeMode = PopupResizeMode.TopLeft;
-			else if (ResizeMode == PopupResizeMode.BottomRight)
-				ResizeMode = PopupResizeMode.TopRight;
-
-			if (ResizeMode != previous)
-				RecalculateHostedControlLayout();
-		}
-
 		// Assign event handler to control.
 		hostedControl.SizeChanged += hostedControl_SizeChanged;
 	}
@@ -235,23 +222,27 @@ public class PopupDropDown : ToolStripDropDown {
 	protected void ResizeFromContent(int width) {
 		if (m_lockedThisSize)
 			return;
-
-		// Prevent resizing hosted control to 1x1 pixel!
+		var LayoutChanged = false;
 		m_lockedHostedControlSize = true;
-
-		// Resize from content again because certain information was not available before.
-		Rectangle bounds = Bounds;
-		bounds.Size = SizeFromContent(width);
-
-		if (!CompareResizeMode(PopupResizeMode.None)) {
-			if (width > 0 && bounds.Width - 2 > width)
-				if (!CompareResizeMode(PopupResizeMode.Right))
-					bounds.X -= bounds.Width - 2 - width;
+		using (Tools.Scope.ExecuteOnDispose(() => m_lockedHostedControlSize = false)) {
+			var WorkingArea = Screen.FromRectangle(_anchorBounds).WorkingArea;
+			var ContentSize = SizeFromContent(width);
+			var SpaceAbove = Tools.Values.ClipValue(_anchorBounds.Top - WorkingArea.Top, 0, WorkingArea.Height);
+			var SpaceBelow = Tools.Values.ClipValue(WorkingArea.Bottom - _anchorBounds.Bottom, 0, WorkingArea.Height);
+			var PopupSize = new Size(Math.Min(ContentSize.Width, WorkingArea.Width), Math.Min(ContentSize.Height, Math.Max(1, Math.Max(SpaceAbove, SpaceBelow))));
+			var ShowAbove = PopupSize.Height > SpaceBelow;
+			var Left = (ResizeMode & PopupResizeMode.Left) != 0 && _anchorBounds.Width > 0 ? _anchorBounds.Right - PopupSize.Width : _anchorBounds.Left;
+			var Top = ShowAbove ? _anchorBounds.Top - PopupSize.Height : _anchorBounds.Bottom;
+			var Location = new Point(Tools.Values.ClipValue(Left, WorkingArea.Left, WorkingArea.Right - PopupSize.Width),
+				Tools.Values.ClipValue(Top, WorkingArea.Top, WorkingArea.Bottom - PopupSize.Height));
+			var PreviousResizeMode = ResizeMode;
+			if (IsGripShown)
+				ResizeMode = (ResizeMode & (PopupResizeMode.Left | PopupResizeMode.Right)) | (ShowAbove ? PopupResizeMode.Top : PopupResizeMode.Bottom);
+			Bounds = new Rectangle(Location, PopupSize);
+			LayoutChanged = ContentSize != PopupSize || ResizeMode != PreviousResizeMode;
 		}
-
-		Bounds = bounds;
-
-		m_lockedHostedControlSize = false;
+		if (LayoutChanged)
+			RecalculateHostedControlLayout();
 	}
 
 	protected void RecalculateHostedControlLayout() {
@@ -312,6 +303,8 @@ public class PopupDropDown : ToolStripDropDown {
 			contentSize = SizeFromClientSize(hostedControl.Size);
 
 			// Use minimum width (if specified).
+			if (hostedControl.MaximumSize.Width > 0)
+				width = Math.Min(width, hostedControl.MaximumSize.Width);
 			if (width > 0 && contentSize.Width < width) {
 				contentSize.Width = width;
 				m_refreshSize = true;
@@ -409,19 +402,17 @@ public class PopupDropDown : ToolStripDropDown {
 		Control hostedControl = GetHostedControl();
 		if (hostedControl != null) {
 			MINMAXINFO minmax = (MINMAXINFO)Marshal.PtrToStructure(m.LParam, typeof(MINMAXINFO));
+			var WorkingArea = Screen.FromRectangle(_anchorBounds).WorkingArea;
+			var BorderAndGrip = new Size(2, IsGripShown ? 18 : 2);
 
 			// Maximum size.
-			if (hostedControl.MaximumSize.Width != 0)
-				minmax.maxTrackSize.Width = hostedControl.MaximumSize.Width;
-			if (hostedControl.MaximumSize.Height != 0)
-				minmax.maxTrackSize.Height = hostedControl.MaximumSize.Height;
+			minmax.maxTrackSize.Width = hostedControl.MaximumSize.Width > 0 ? Math.Min(WorkingArea.Width, hostedControl.MaximumSize.Width + BorderAndGrip.Width) : WorkingArea.Width;
+			minmax.maxTrackSize.Height = hostedControl.MaximumSize.Height > 0 ? Math.Min(WorkingArea.Height, hostedControl.MaximumSize.Height + BorderAndGrip.Height) : WorkingArea.Height;
 
 			// Minimum size.
 			minmax.minTrackSize = new Size(32, 32);
-			if (hostedControl.MinimumSize.Width > minmax.minTrackSize.Width)
-				minmax.minTrackSize.Width = hostedControl.MinimumSize.Width;
-			if (hostedControl.MinimumSize.Height > minmax.minTrackSize.Height)
-				minmax.minTrackSize.Height = hostedControl.MinimumSize.Height;
+			minmax.minTrackSize.Width = Math.Min(minmax.maxTrackSize.Width, Math.Max(32, hostedControl.MinimumSize.Width + BorderAndGrip.Width));
+			minmax.minTrackSize.Height = Math.Min(minmax.maxTrackSize.Height, Math.Max(32, hostedControl.MinimumSize.Height + BorderAndGrip.Height));
 
 			Marshal.StructureToPtr(minmax, m.LParam, false);
 		}
@@ -512,6 +503,7 @@ public class PopupDropDown : ToolStripDropDown {
 	private bool m_lockedHostedControlSize = false;
 	private bool m_lockedThisSize = false;
 	private bool m_refreshSize = false;
+	private Rectangle _anchorBounds;
 
 	#endregion
 

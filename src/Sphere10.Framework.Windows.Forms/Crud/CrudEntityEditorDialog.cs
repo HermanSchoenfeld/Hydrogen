@@ -48,6 +48,8 @@ public partial class CrudEntityEditorDialog : Form {
 		this.Size = new Size(this.Width + (targetPanelWidth - currentPanelWidth), this.Height + (targetPanelHeight - currentPanelHeight));
 		editorControl.Dock = DockStyle.Fill;
 		var canSave = (isNewEntity && _capabilities.HasFlag(DataSourceCapabilities.CanCreate)) || (!isNewEntity && _capabilities.HasFlag(DataSourceCapabilities.CanUpdate));
+		var ActionName = isNewEntity ? "Create" : canSave ? "Edit" : "View";
+		Text = $"{ActionName} {entity.GetType().Name}";
 		_entityEditorControlPanel.Controls.Add(editorControl);
 		_deleteButton.Visible = _capabilities.HasFlag(DataSourceCapabilities.CanDelete) && !isNewEntity;
 		_saveButton.Visible = canSave;
@@ -67,16 +69,16 @@ public partial class CrudEntityEditorDialog : Form {
 	public async Task<bool> SaveChanges() {
 		if (_isNewEntity) {
 			if (await Validate(CrudAction.Create)) {
+				await _dataSource.CreateAsync(_crudEntityEditor.GetEntityWithChanges());
 				_crudEntityEditor.AcceptChanges();
-					await _dataSource.CreateAsync(_crudEntityEditor.GetEntityWithChanges());
 				UserAction = CrudAction.Create;
 				RequiresGridRefresh = true;
 				return true;
 			}
 		} else {
 			if (await Validate(CrudAction.Update)) {
+				await _dataSource.UpdateAsync(_crudEntityEditor.GetEntityWithChanges());
 				_crudEntityEditor.AcceptChanges();
-					await _dataSource.UpdateAsync(_crudEntityEditor.GetEntityWithChanges());
 				UserAction = CrudAction.Update;
 				RequiresGridRefresh = true;
 				return true;

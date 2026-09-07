@@ -77,43 +77,31 @@ public abstract class BaseMouseHook : BaseDeviceHook, IMouseHook {
 
 	protected void FireMotionStartEvent(MouseMoveEvent mouseMoveEvent) {
 		OnMotionStart(mouseMoveEvent);
-		if (MotionStart != null) {
-			MotionStart(this, mouseMoveEvent);
-		}
+		MotionStart?.Invoke(this, mouseMoveEvent);
 	}
 
 	protected void FireMotionEvent(MouseMoveEvent mouseMoveEvent) {
 		OnMotion(mouseMoveEvent);
-		if (Motion != null) {
-			Motion(this, mouseMoveEvent);
-		}
+		Motion?.Invoke(this, mouseMoveEvent);
 	}
 
 	protected void FireMotionStopEvent(MouseMoveEvent mouseMoveEvent) {
 		OnMotionStop(mouseMoveEvent);
-		if (MotionStop != null) {
-			MotionStop(this, mouseMoveEvent);
-		}
+		MotionStop?.Invoke(this, mouseMoveEvent);
 	}
 
 	protected void FireClickEvent(MouseClickEvent mouseClickEvent) {
 		OnClick(mouseClickEvent);
-		if (Click != null) {
-			Click(this, mouseClickEvent);
-		}
+		Click?.Invoke(this, mouseClickEvent);
 	}
 
 	protected void FireScrollEvent(MouseWheelEvent mouseScrollEvent) {
 		OnScroll(mouseScrollEvent);
-		if (Scroll != null) {
-			Scroll(this, mouseScrollEvent);
-		}
+		Scroll?.Invoke(this, mouseScrollEvent);
 	}
 	protected void FireActivityEvent(MouseEvent mouseEvent) {
 		OnActivity(mouseEvent);
-		if (Activity != null) {
-			Activity(this, mouseEvent);
-		}
+		Activity?.Invoke(this, mouseEvent);
 	}
 
 	protected virtual void ProcessMouseActivity(int currentX, int currentY, MouseButton buttonClicked, MouseButtonState buttonState, MouseClickType clickType, int wheelDelta) {

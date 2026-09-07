@@ -12,4 +12,7 @@
 	<ItemGroup>
 		<ProjectReference Include="../../src/Sphere10.Framework.Windows.Forms/Sphere10.Framework.Windows.Forms.csproj" />
 	</ItemGroup>
+	<ItemGroup>
+		<Compile Include="../../utils/Sphere10.Framework.Utils.WinFormsTester/Wizard/*.cs" Link="DemoWizard/%(Filename)%(Extension)" />
+	</ItemGroup>
 </Project>

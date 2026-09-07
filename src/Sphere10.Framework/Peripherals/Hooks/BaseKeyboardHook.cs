@@ -58,21 +58,15 @@ public abstract class BaseKeyboardHook : BaseDeviceHook, IKeyboardHook {
 
 	protected void FireKeyDownEvent(KeyEvent keyEvent) {
 		OnKeyDown(keyEvent);
-		if (KeyDown != null) {
-			KeyDown(this, keyEvent);
-		}
+		KeyDown?.Invoke(this, keyEvent);
 	}
 	protected void FireKeyActivityEvent(KeyEvent keyEvent) {
 		OnKeyActivity(keyEvent);
-		if (KeyActivity != null) {
-			KeyActivity(this, keyEvent);
-		}
+		KeyActivity?.Invoke(this, keyEvent);
 	}
 	protected void FireKeyUpEvent(KeyEvent keyEvent) {
 		OnKeyUp(keyEvent);
-		if (KeyUp != null) {
-			KeyUp(this, keyEvent);
-		}
+		KeyUp?.Invoke(this, keyEvent);
 	}
 }
 

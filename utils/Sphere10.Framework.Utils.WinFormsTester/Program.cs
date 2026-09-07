@@ -56,6 +56,7 @@ static class Program {
 		Sphere10Framework.Instance
 			.BuildWinFormsApplication()
 			.UseMainForm<BlockMainForm>(Form => Form.ScreenMode = ScreenMode.MultiView)
+			.UseMainFormSettings()
 			.UseModule<Sphere10.Framework.Application.ModuleConfiguration>()
 			.UseModule<Sphere10.Framework.CryptoEx.ModuleConfiguration>()
 			.UseModule<Sphere10.Framework.Windows.Forms.ModuleConfiguration>()

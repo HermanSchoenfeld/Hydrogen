@@ -14,83 +14,53 @@ using System.Windows.Forms;
 namespace Sphere10.Framework.Windows.Forms;
 
 public partial class DefaultCrudEntityEditor : UserControl, ICrudEntityEditor<object> {
-	private object _entity;
-	private object _backupEntity;
-	private bool _isNewEntity;
-	private DataSourceCapabilities _crudCapabilities;
+	public event EventHandlerEx<CrudEntityPropertyChangedEventArgs>? PropertyChanged;
 
-	
-	public event EventHandlerEx<CrudEntityPropertyChangedEventArgs> PropertyChanged;
+	private object? _entity;
+	private CrudEntityTypeDescriptor? _entityDescriptor;
 
 	public DefaultCrudEntityEditor() {
 		InitializeComponent();
-		_isNewEntity = false;
 	}
 
+	public IDictionary<string, CrudReferenceBinding> ReferenceBindings { get; } = new Dictionary<string, CrudReferenceBinding>(StringComparer.Ordinal);
 
-	#region IEntityEditor<object> Implementation
+	public bool HasChanges => _entityDescriptor?.HasChanges ?? false;
 
-	public Control AsControl() {
-		return this;
+	public Control AsControl() => this;
+
+	public void SetEntity(DataSourceCapabilities Capabilities, object Entity, bool IsNewEntity) {
+		Guard.ArgumentNotNull(Entity, nameof(Entity));
+		_entity = Entity;
+		_entityDescriptor = new CrudEntityTypeDescriptor(Entity, ReferenceBindings);
+		_propertyGrid.SelectedObject = _entityDescriptor;
+		_propertyGrid.Enabled = Capabilities.HasFlag(IsNewEntity ? DataSourceCapabilities.CanCreate : DataSourceCapabilities.CanUpdate);
 	}
 
-	public void SetEntity(DataSourceCapabilities capabilities, object entity, bool isNewEntity) {
-		_crudCapabilities = capabilities;
-		_entity = entity;
-		_isNewEntity = isNewEntity;
-		CreateBackup();
-		BindToPropertyGrid();
-	}
-
-	public object GetEntityWithChanges() {
-		return _entity;
-	}
-
-	public bool HasChanges {
-		get { return !Tools.Object.Compare(_backupEntity, _entity); }
-	}
+	public object GetEntityWithChanges() => _entity!;
 
 	public void UndoChanges() {
-		Tools.Object.CopyMembers(_backupEntity, _entity, true);
+		_entityDescriptor?.UndoChanges();
+		_propertyGrid.Refresh();
 	}
 
 	public void AcceptChanges() {
-		CreateBackup();
+		_entityDescriptor?.AcceptChanges();
+		_propertyGrid.Refresh();
 	}
 
-	public IEnumerable<string> Validate() {
-		return Enumerable.Empty<string>();
+	public IEnumerable<string> Validate() => Enumerable.Empty<string>();
+
+	protected virtual void OnPropertyChanged(object Entity, object PropertyName, object OldValue, object NewValue) {
 	}
 
-	protected virtual void OnPropertyChanged(object entity,  object propertyName, object oldValue, object newValue) {
+	private void _propertyGrid_PropertyValueChanged(object Source, PropertyValueChangedEventArgs Args) {
+		var Path = new Stack<string>();
+		for (var Item = Args.ChangedItem; Item != null; Item = Item.Parent)
+			if (Item.PropertyDescriptor != null)
+				Path.Push(Item.PropertyDescriptor.Name);
+		var Change = new CrudEntityPropertyChangedEventArgs(_entity!, string.Join(".", Path), Args.OldValue!, Args.ChangedItem.Value!);
+		OnPropertyChanged(_entity!, Change.PropertyName, Change.OldValue, Change.NewValue);
+		PropertyChanged?.Invoke(Change);
 	}
-
-	#endregion
-
-
-	#region Binding
-
-	private void BindToPropertyGrid() {
-		if (_backupEntity != null) {
-			_propertyGrid.SelectedObject = _entity;
-		}
-		_propertyGrid.Enabled = (_isNewEntity && _crudCapabilities.HasFlag(DataSourceCapabilities.CanCreate)) || (!_isNewEntity && _crudCapabilities.HasFlag(DataSourceCapabilities.CanUpdate));
-	}
-
-	private void CreateBackup() {
-		_backupEntity = Tools.Object.CloneObject(_entity, true);
-	}
-
-	#endregion
-
-	#region Internal Event Handlers
-	private void _propertyGrid_PropertyValueChanged(object source, PropertyValueChangedEventArgs e) {
-		var crudEntityChangedEvent = new CrudEntityPropertyChangedEventArgs(_entity, e.ChangedItem.PropertyDescriptor.Name, e.OldValue, e.ChangedItem.Value);
-		OnPropertyChanged(_entity, crudEntityChangedEvent.PropertyName, crudEntityChangedEvent.OldValue, crudEntityChangedEvent.NewValue);
-		PropertyChanged?.Invoke(crudEntityChangedEvent);
-	}
-
-	#endregion
-
 }
-

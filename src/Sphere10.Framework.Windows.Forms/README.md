@@ -32,6 +32,8 @@ Custom forms use .NET WinForms directly: `using var Dialog = new MyDialog(); var
 
 `Wizard.Start(owner)` also awaits native `Form.ShowDialogAsync`, keeping its owner disabled until completion or cancellation and disposing the wizard dialog afterward.
 
+Wizard screens receive their `Wizard` and `Model` before `Initialize`, including screens added with `InjectScreen`. Navigation calls `Validate` before `OnNext`; commit accepted input in `OnNext` when invalid input must not change the model. Set `UpdateModelOnStateChanged = false` for this pattern. The default `OnPresent` calls `CopyModelToUI`, so input and summary screens can refresh their controls each time they are shown.
+
 WinForms closing and validation events still require cancellation and handled flags to be set before the first `await`. Synchronous grid queries and model construction can only schedule asynchronous error reporting; they cannot await a modal result. `IWindowsFormsEditorService.ShowDialog`, common file/folder/color dialogs, and the synchronous `LiteMainForm.AskYN` contract retain synchronous modal calls. `AskYN` uses a native message box; blocking `ShowDialogAsync` with `.Result` or `.GetAwaiter().GetResult()` on the UI thread would deadlock.
 
 Run the STA regression tests with `dotnet test tests/Sphere10.Framework.Windows.Forms.Tests/Sphere10.Framework.Windows.Forms.Tests.csproj` on Windows. They exercise actual forms with a message loop and close their dialogs automatically.
@@ -65,6 +67,49 @@ IDAC dac = connectionPanel.GetDAC();
 **Source Grid**: Advanced data grid component for tabular data display.
 
 ## 🔧 Core Components
+
+### CrudGrid
+
+`CrudGrid` hides the create and delete buttons when their respective capabilities are unavailable. Delete is also hidden unless a visible row is selected. Toolbar and paging controls size to their contents, including scaled fonts and DPI.
+
+Set `AllowCellEditing = true` to edit columns with `CanEditCell = true` and a `SetPropertyValue` binding; `CanUpdate` must also be enabled. Changing the editing setting updates existing cells immediately. `LeftClickToDeselect` toggles a row on successive single clicks, including Ctrl-clicks. When both settings are enabled, double-click an editable cell or press **F2** to edit while keeping its row selected; checkbox values also change only through that explicit edit gesture. These selection modes also support `SelectOnMouseUp`.
+
+Manual page sizes range from **1 to 9999**, in steps of one. With paging enabled, `AutoPageSize` uses the grid viewport, measured header and row heights, and any horizontal scrollbar to fit complete rows. It recalculates when the control is resized and retains a minimum page size of one for very small controls.
+
+### References from a data source
+
+Assign a `CrudReferenceBinding<TEntity>` to a column's `ReferenceBinding` to select an existing record from a CRUD dropdown. Set `PropertyName` to the entity's property name so the default edit dialog uses the same picker:
+
+```csharp
+var ManagerBinding = new CrudReferenceBinding<Employee>(EmployeeDataSource, EmployeeColumns,
+	Employee => $"{Employee.FirstName} {Employee.LastName}");
+var ManagerColumn = new CrudGridColumn<Employee> {
+	ColumnName = "Manager",
+	PropertyName = nameof(Employee.Manager),
+	DataType = typeof(Employee),
+	DisplayType = CrudCellDisplayType.DropDownList,
+	PropertyValue = Employee => Employee.Manager,
+	SetPropertyValue = (Employee, Value) => Employee.Manager = (Employee)Value,
+	CanEditCell = true,
+	ReferenceBinding = ManagerBinding
+};
+```
+
+The picker is read-only, automatically fits complete rows, and supports paging, search, and sorting when the data source supports them. Create, edit, delete, and action columns are omitted. Selecting a row assigns that exact record; **Clear** assigns null when allowed, and **Cancel** or Escape preserves the current reference. Set `AllowNull = false` to remove Clear. `DropDownSize` (also exposed as `MaximumDropDownSize`) sets the popup's content size in device pixels, defaulting to 760 × 380 and capped to the available screen space. The grid fills the popup. Search, paging, and empty results keep its dimensions stable; manual resizing lasts for that open picker.
+
+Set `ExpandsToFit = true` on the column that should occupy spare width, such as the Name column in a reference picker. Other columns keep their measured content widths. Multiple configured columns share the extra space; no column stretches implicitly when none is configured. Resizing recalculates the configured columns from their content widths, and content that cannot fit still uses horizontal scrolling. Automatic page sizing continues to fit complete rows in the available grid height.
+
+`CrudGrid.ReferenceBindings` and `DefaultCrudEntityEditor.ReferenceBindings` also accept bindings keyed by a property path, such as `"Manager"` or `"Address.Contact"`. The grid supplies its own data source automatically for properties whose type matches the edited entity type and which have no custom editor or converter. Explicit bindings take precedence. This avoids expanding recursive entity relationships while ordinary nested values such as Address remain editable.
+
+`CrudComboBox` uses the same column configuration. Its `MaximumDropDownSize` and optional `SetCrudParameters(size: ...)` configure the popup size, capped to the available screen space. Use `ExpandsToFit` in its grid bindings to choose which columns fill spare width.
+
+### Default entity editor
+
+The default CRUD dialog expands ordinary reference properties such as `Address` into editable child rows without requiring attributes on the model. Existing interface and abstract instances can also be expanded. Writable concrete types with public parameterless constructors offer **(Create new)** and **(none)** choices. Circular references stop expanding when they reach an object already shown in the current path.
+
+Nested changes retain object identity. Cancel restores edited values on the original objects, including shared references. Save accepts the new baseline only after persistence succeeds, so a failed save can still be cancelled. Change events report full paths such as `Address.Street`.
+
+Custom converters, editors, and read-only metadata remain in use. Custom editor rollback covers editable object properties and `IList` membership. Applications needing domain-specific reference selection or factories, mutable collection-item editing, or opaque state should provide an `ICrudEntityEditor` implementation.
 
 ### DatabaseConnectionPanel
 
@@ -280,6 +325,26 @@ The builder pattern supports:
 - **Fluent API**: Chain methods for clean, readable code
 - **Type-safe**: Compile-time checking with generics
 
+### Remembering the main window
+
+Enable automatic per-user window settings at application startup:
+
+```csharp
+Sphere10Framework.Instance
+	.BuildWinFormsApplication()
+	.UseMainForm<BlockMainForm>()
+	.UseMainFormSettings()
+	.StartWinFormsApplication();
+```
+
+`UseMainFormSettings()` restores the main window's normal bounds, monitor and maximized state, captures its placement on accepted closure, and writes it once through a framework shutdown task before settings providers are disposed. Moving, resizing, and dragging the menu divider do not write settings. Cancelled exit requests do not queue a save. A minimized window reopens in its last normal or maximized state. Missing monitors and changed working areas or DPI are handled by fitting the window onto an available display. Without saved settings, the configured initial size is used.
+
+`BlockMainForm` also saves the left navigation pane's width in the same `FormWindowSettings`, including its last expanded width while collapsed or temporarily hidden. The restored width scales with DPI and is clamped to the current navigation limits. With no saved width, the wider default applies.
+
+`FormWindowSettings` uses the existing `UserSettings` provider and `SettingsObject.Save()` contract. The default settings ID is `"MainForm"`; supply `SettingsID` to distinguish multiple main-window configurations. `UseMainFormSettings(false)` disables automatic persistence. Optional preference read/write failures are logged and do not prevent opening or closing the application.
+
+Other forms can keep `Tools.WinForms.AutoPersistWindowSettings(Form, SettingsID)` in a `using` scope for the window's lifetime to save once on accepted closure, or use `CaptureWindowSettings` and `RestoreWindowSettings` with their own `FormWindowSettings` instance. See the repository [user-settings skill](../../.github/skills/user-settings/SKILL.md) for settings classes, defaults, lifecycle and storage conventions.
+
 ### Multiple screens and detachable tabs
 
 `MainForm.ScreenMode` defaults to `ScreenMode.SingleView`, which shows one screen without a tab bar. Set it to `ScreenMode.MultiView` to keep multiple screens open in titled tabs. `BlockMainForm` inherits this property and hosts the tabs in its main content panel.
@@ -328,7 +393,7 @@ Detached windows use a compact caption with accessible **Re-dock**, **Minimize**
 - Drag tabs along the tab bar to see them move immediately; Escape restores the original position.
 - In a detached window, use the caption's **Re-dock** icon, or bring the window's title bar close to the main tab strip. Only the header band accepts drag docking; the screen content panel does not. A highlighted tab-sized **Release to dock** preview and text hint show the proposed position and screen title without changing tab widths, order, or selection. The highlight uses the ExplorerBar palette and follows the visible navigation pane's blue in `BlockMainForm`. Leaving the target or cancelling the drag clears the preview.
 
-Collapse and restore the entire left navigation pane with the **sidebar icon** in the main toolbar, or **Ctrl+Alt+M**. The icon remains available across screen switches and supplies Show/Hide sidebar tooltips. It does not reserve a separate header or collapsed gutter. `BlockMainForm.NavigationPaneCollapsed` exposes the preference. The pane remembers its width and collapsed state across screen switches. Filled screens temporarily hide navigation without changing that preference.
+The left navigation pane starts at 320 logical pixels wide and scales with the form. Drag its divider to choose a different width. `MaximumNavigationPaneWidth` defaults to 480 logical pixels at 96 DPI; the effective limit also reserves 320 logical pixels for the screen when space permits. Limits scale with DPI and clamp oversized saved widths. Minimized or temporarily undersized layouts defer divider updates until both panels fit; the remembered width remains available for restoration and settings capture. Collapse and restore the entire left navigation pane with the **sidebar icon** in the main toolbar, or **Ctrl+Alt+M**. The icon remains available across screen switches and supplies Show/Hide sidebar tooltips. It does not reserve a separate header or collapsed gutter. `BlockMainForm.NavigationPaneCollapsed` exposes the preference. The pane remembers its width and collapsed state across screen switches. Filled screens temporarily hide navigation without changing that preference.
 
 `MainForm.ScreenHost` exposes `ActivateScreen`, `ShowScreen`, `CloseScreen`, `CloseScreens`, `CanCloseScreens`, `UndockScreen`, `DockScreen`, `OpenScreens` and `Screens`. `ActiveScreen` identifies the selected docked screen; detached windows retain independent chrome. `Screens` also includes cached single-instance screens hidden in SingleView. `ActivateScreen` and menu navigation reuse an existing singleton. Direct `ShowScreen` calls reject a second singleton instance; the caller still owns a rejected instance. A screen belongs to one host at a time.
 

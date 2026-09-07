@@ -18,6 +18,7 @@ namespace Sphere10.Framework.Windows.Forms.SourceGrid.DevAgeControls;
 public class DropDown : System.Windows.Forms.Form {
 	private Point StartLocation = new Point(0, 0);
 	private System.Windows.Forms.Panel panelContainer;
+	private bool _calculatingLocation;
 
 	/// <summary>
 	/// Required designer variable.
@@ -117,51 +118,28 @@ public class DropDown : System.Windows.Forms.Form {
 	}
 
 	private void CalcLocation() {
-		if (m_InnerControl != null && m_ParentControl != null) {
-			//m_InnerControl.Width = Math.Max(m_ParentControl.Width,m_InnerControl.Width);
-			//m_InnerControl.Width = Math.Max(m_ParentControl.Width, m_InnerControl.Width);
-			//m_InnerControl.Location = new Point(0, 0);
-			Size = m_InnerControl.Size;
-		}
-
-		Rectangle parentRectangle = m_ParentControl.RectangleToScreen(m_ParentControl.ClientRectangle);
-
-		// Determine which screen we're on and how big it is.
-		Screen DisplayedOnScreen = Screen.FromPoint(new Point(parentRectangle.X, parentRectangle.Bottom));
-		int MinScreenXPos = DisplayedOnScreen.Bounds.X;
-		//int MinScreenYPos = DisplayedOnScreen.Bounds.Y;
-		int MaxScreenXPos = DisplayedOnScreen.Bounds.X + DisplayedOnScreen.Bounds.Width;
-		int MaxScreenYPos = DisplayedOnScreen.Bounds.Y + DisplayedOnScreen.Bounds.Height;
-
-		int DropdownWidth = Width; //CalcWidth();
-		int DropdownHeight = Height; //CalcHeight();
-
-		// Will we bump into the right edge of the window when we first display the control?
-		if ((parentRectangle.X + DropdownWidth) <= MaxScreenXPos) {
-			if (parentRectangle.X < MinScreenXPos)
-				StartLocation.X = MinScreenXPos;
-			else
-				StartLocation.X = parentRectangle.X;
-		} else {
-			//DrawLeftToRight = false;
-
-			// Make sure we aren't overhanging the left side of the screen.
-			if (Screen.FromPoint(new Point((parentRectangle.X + parentRectangle.Width), 0)) == DisplayedOnScreen)
-				StartLocation.X = parentRectangle.Right - DropdownWidth;
-			else
-				StartLocation.X = MaxScreenXPos - DropdownWidth;
-		}
-
-		// And now check the bottom of the screen.
-		if ((parentRectangle.Bottom + DropdownHeight) <= MaxScreenYPos)
-			StartLocation.Y = parentRectangle.Bottom;
-		else {
-			//DrawTopToBottom = false;
-			StartLocation.Y = parentRectangle.Y - DropdownHeight;
-		}
-
-		this.Location = StartLocation;
+		if (_calculatingLocation || m_InnerControl == null || m_ParentControl == null || m_InnerControl.IsDisposed || m_ParentControl.IsDisposed)
+			return;
+		_calculatingLocation = true;
+		using var LocationScope = Tools.Scope.ExecuteOnDispose(() => _calculatingLocation = false);
+		var ParentRectangle = m_ParentControl.RectangleToScreen(m_ParentControl.ClientRectangle);
+		var WorkingArea = Screen.FromRectangle(ParentRectangle).WorkingArea;
+		var SpaceAbove = Tools.Values.ClipValue(ParentRectangle.Top - WorkingArea.Top, 0, WorkingArea.Height);
+		var SpaceBelow = Tools.Values.ClipValue(WorkingArea.Bottom - ParentRectangle.Bottom, 0, WorkingArea.Height);
+		var MaximumHeight = Math.Max(1, Math.Max(SpaceAbove, SpaceBelow));
+		var BorderSize = panelContainer.Size - panelContainer.ClientSize;
+		var ContentSize = new Size(Math.Min(m_InnerControl.Width, Math.Max(1, WorkingArea.Width - BorderSize.Width)),
+			Math.Min(m_InnerControl.Height, Math.Max(1, MaximumHeight - BorderSize.Height)));
+		m_InnerControl.Size = ContentSize;
+		ClientSize = ContentSize + BorderSize;
+		var Left = ParentRectangle.Left + Width <= WorkingArea.Right ? ParentRectangle.Left : ParentRectangle.Right - Width;
+		var Top = Height <= SpaceBelow ? ParentRectangle.Bottom : ParentRectangle.Top - Height;
+		StartLocation = new Point(Tools.Values.ClipValue(Left, WorkingArea.Left, Math.Max(WorkingArea.Left, WorkingArea.Right - Width)),
+			Tools.Values.ClipValue(Top, WorkingArea.Top, Math.Max(WorkingArea.Top, WorkingArea.Bottom - Height)));
+		Location = StartLocation;
 	}
+
+	private void InnerControl_SizeChanged(object Sender, EventArgs Args) => CalcLocation();
 
 	protected override bool ProcessCmdKey(ref Message msg, Keys keyData) {
 		if ((m_Flags & DropDownFlags.CloseOnEscape) == DropDownFlags.CloseOnEscape) {
@@ -224,21 +202,21 @@ public class DropDown : System.Windows.Forms.Form {
 			DropDownOpen(this, e);
 
 		panelContainer.Controls.Add(m_InnerControl);
-
-		try {
-			CalcLocation();
-
-			Show();
-
-			//This code simulate a ShowDialog. ShowDialog cannot be used because I need to receive the deactivate event to close the window.
-			// This is not the best solution anyway because the parent for is deactivated and the user experience it is not the best.
-			while (m_bShowed) {
-				System.Windows.Forms.Application.DoEvents();
-				System.Threading.Thread.Sleep(1); //To prevent the CPU to work on 100%
-			}
-		} finally {
-			//I must remove the control because UITypeEditor doesn't support dispose and the Controls collection is automatically disposed
+		m_InnerControl.SizeChanged += InnerControl_SizeChanged;
+		using var ContentScope = Tools.Scope.ExecuteOnDispose(() => {
+			m_InnerControl.SizeChanged -= InnerControl_SizeChanged;
+			// The editor owns the control; removing it prevents disposal by this form.
 			panelContainer.Controls.Remove(m_InnerControl);
+		});
+		CalcLocation();
+
+		Show();
+
+		//This code simulate a ShowDialog. ShowDialog cannot be used because I need to receive the deactivate event to close the window.
+		// This is not the best solution anyway because the parent for is deactivated and the user experience it is not the best.
+		while (m_bShowed) {
+			System.Windows.Forms.Application.DoEvents();
+			System.Threading.Thread.Sleep(1); //To prevent the CPU to work on 100%
 		}
 	}
 

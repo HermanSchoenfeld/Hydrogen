@@ -16,7 +16,7 @@ description: WinForms screens, wizards, and application blocks. Trigger when cre
 		  .Build();
   ```
 - Derive screens from `ApplicationScreen`.
-- `CrudGrid` for data-bound grid screens backed by `IDataSource<T>` (see [data-source](../data-source/SKILL.md)).
+- Use the [crud-grid](../crud-grid/SKILL.md) skill for `CrudGrid` binding, editing, reference pickers, paging, and dropdown layout; use [data-source](../data-source/SKILL.md) when implementing its `IDataSource<T>`.
 
 ## Wizards
 Use `WizardBuilder<T>` (`src/Sphere10.Framework.Windows.Forms/Wizard/WizardBuilder.cs`):
@@ -33,3 +33,6 @@ var wizard =
 ```
 - `Build()` requires a title, at least one screen, and a finish function (enforced via `Guard.Ensure`).
 - Follow the [builder-pattern](../builder-pattern/SKILL.md) skill when extending wizard configuration.
+
+## Remembered user preferences
+Use the [user-settings](../user-settings/SKILL.md) skill for preferences that survive application restarts, including the main form's size and monitor, page sizes, and filters.

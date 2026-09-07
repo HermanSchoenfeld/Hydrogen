@@ -20,6 +20,8 @@ namespace Sphere10.Framework.Utils.WinFormsTester;
 
 public partial class CommunicationsTestScreen : ApplicationScreen {
 	const int NodeDiscoveryPort = 21000;
+	private readonly Timer _reportTimer;
+	private bool _initialized;
 	CommunicationRole CommunicationRole { get; set; }
 
 	UDPChannel UDPChannel { get; set; }
@@ -30,17 +32,31 @@ public partial class CommunicationsTestScreen : ApplicationScreen {
 	ServerWebSocketsChannel ServerWebSocketsChannel { get; set; }
 	ClientWebSocketsChannel ClientWebSocketsChannel { get; set; }
 
-	System.Timers.Timer Timer { get; set; }
-
 	private ServerWebSocketsDataSource<TestClass> DataSource { get; set; }
 
 	public CommunicationsTestScreen() {
 		InitializeComponent();
+		_reportTimer = new Timer(components ??= new System.ComponentModel.Container()) { Interval = 1000 };
+		_reportTimer.Tick += ReportTimer_Tick;
 		SystemLog.RegisterLogger(new TextBoxLogger(Output));
 		SystemLog.RegisterLogger(new FileAppendLogger("c:/temp/test.txt", true));
 	}
 
+	protected override void OnHandleCreated(EventArgs Event) {
+		base.OnHandleCreated(Event);
+		if (!Disposing && !IsDisposed && DataSource != null)
+			_reportTimer?.Start();
+	}
+
+	protected override void OnHandleDestroyed(EventArgs Event) {
+		_reportTimer?.Stop();
+		base.OnHandleDestroyed(Event);
+	}
+
 	private void WebSocketsScreen_Load(object sender, EventArgs e) {
+		if (_initialized)
+			return;
+
 		SendPort.Value = 80;
 		var localHost = Dns.GetHostEntry(Dns.GetHostName());
 		foreach (var ipAddress in localHost.AddressList) {
@@ -77,18 +93,16 @@ public partial class CommunicationsTestScreen : ApplicationScreen {
 		var remoteEndpoint = new IPEndPoint(IPAddress.Parse(SendIP.Text), (int)SendPort.Value);
 		DataSource = new ServerWebSocketsDataSource<TestClass>(localEndpoint, remoteEndpoint, false, InitializeItem, UpdateItem, IdItem);
 
-		Timer = new System.Timers.Timer(1000); // 1 seconds
-		Timer.Elapsed += Timer_Elapsed;
-		Timer.Start();
+		_initialized = true;
+		_reportTimer.Start();
 	}
 
 	string PreviousReport { get; set; }
-	private void Timer_Elapsed(object sender, System.Timers.ElapsedEventArgs e) {
-
-		if (DataSource == null)
+	private void ReportTimer_Tick(object Sender, EventArgs Event) {
+		if (Disposing || IsDisposed || !IsHandleCreated || DataSource == null)
 			return;
 
-		Invoke((MethodInvoker)delegate { DoReport(); });
+		DoReport();
 	}
 
 	void DoReport() {

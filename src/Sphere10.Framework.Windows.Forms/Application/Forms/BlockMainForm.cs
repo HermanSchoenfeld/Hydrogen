@@ -21,7 +21,6 @@ namespace Sphere10.Framework.Windows.Forms;
 #warning Add icons
 #warning Add menus
 #warning Add plugin stuff to menus
-#warning Add restore mainform to lastsize
 
 public partial class BlockMainForm : MainForm, IBlockManager {
 	private readonly SidebarToggleButton _navigationPaneToggleButton;
@@ -29,6 +28,10 @@ public partial class BlockMainForm : MainForm, IBlockManager {
 	private TaskPane? _navigationThemePane;
 	private bool _navigationPaneCollapsed;
 	private double _navigationPaneWidth;
+	private double _navigationPaneMinimumContentWidth;
+	private int _maximumNavigationPaneWidth = 480;
+	private int _navigationPaneDpi = 96;
+	private bool _updatingNavigationPaneWidth;
 
 	#region Form activation/destruction
 
@@ -43,6 +46,10 @@ public partial class BlockMainForm : MainForm, IBlockManager {
 		Plugins = new List<IApplicationBlock>();
 		ActivePlugin = null;
 		_navigationPaneWidth = _splitContainer.SplitterDistance;
+		_navigationPaneDpi = DeviceDpi;
+		_navigationPaneMinimumContentWidth = _splitContainer.Panel2MinSize;
+		_splitContainer.SplitterMoved += NavigationPaneSplitterMoved;
+		_splitContainer.SizeChanged += NavigationPaneSizeChanged;
 		_defaultDockPreviewColors = (ScreenHost.TabControl.DockPreviewBackColor, ScreenHost.TabControl.DockPreviewForeColor);
 		_applicationBar.ButtonPressed += NavigationSelectionChanged;
 		Disposed += NavigationThemeChanged;
@@ -60,6 +67,7 @@ public partial class BlockMainForm : MainForm, IBlockManager {
 		_splitter.Dispose();
 		_splitContainer.Panel2.Controls.Add(ScreenHost);
 		ScreenHost.BringToFront();
+		ApplyNavigationPaneWidth(_navigationPaneWidth);
 
 	}
 
@@ -85,6 +93,27 @@ public partial class BlockMainForm : MainForm, IBlockManager {
 		}
 	}
 
+	/// <summary>The navigation width in device pixels, including its remembered width when temporarily hidden.</summary>
+	[Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+	public int NavigationPaneWidth {
+		get => (int)Math.Round(_navigationPaneWidth);
+		set {
+			Guard.ArgumentGT(value, 0, nameof(value));
+			ApplyNavigationPaneWidth(value);
+		}
+	}
+
+	/// <summary>The maximum navigation width in logical pixels at 96 DPI. Available content space can impose a smaller limit.</summary>
+	[DefaultValue(480), Category("Layout"), Description("Maximum navigation width in logical pixels at 96 DPI")]
+	public int MaximumNavigationPaneWidth {
+		get => _maximumNavigationPaneWidth;
+		set {
+			Guard.ArgumentGT(value, 0, nameof(value));
+			_maximumNavigationPaneWidth = value;
+			ApplyNavigationPaneWidth(_navigationPaneWidth);
+		}
+	}
+
 	public IDictionary<IApplicationBlock, TaskPane> PluginBindings { get; set; }
 
 	public IApplicationBlock ActiveBlock { get; set; }
@@ -100,6 +129,9 @@ public partial class BlockMainForm : MainForm, IBlockManager {
 	private IList<IApplicationBlock> Plugins { get; set; }
 
 	private IApplicationBlock ActivePlugin { get; set; }
+
+	private bool HasUsableNavigationPaneBounds => WindowState != FormWindowState.Minimized &&
+		Math.Min(ClientSize.Width, _splitContainer.Width) - _splitContainer.SplitterWidth - Math.Round(_navigationPaneMinimumContentWidth) >= _splitContainer.Panel1MinSize;
 
 	#endregion
 
@@ -522,6 +554,49 @@ public partial class BlockMainForm : MainForm, IBlockManager {
 		base.RescaleConstantsForDpi(DeviceDpiOld, DeviceDpiNew);
 		// WinForms scales the splitter itself; the remembered width also needs to follow monitor changes while hidden.
 		_navigationPaneWidth *= (double)DeviceDpiNew / DeviceDpiOld;
+		_navigationPaneMinimumContentWidth *= (double)DeviceDpiNew / DeviceDpiOld;
+		_navigationPaneDpi = DeviceDpiNew;
+	}
+
+	protected override void OnLayout(LayoutEventArgs Args) {
+		if (_splitContainer == null || _navigationPaneWidth <= 0 || _updatingNavigationPaneWidth) {
+			base.OnLayout(Args);
+			return;
+		}
+		var RememberedWidth = _navigationPaneWidth;
+		_updatingNavigationPaneWidth = true;
+		using (Tools.Scope.ExecuteOnDispose(() => _updatingNavigationPaneWidth = false)) {
+			// Release the previous drag range before docking. Even the normal minimum can move the splitter when a minimized panel is zero-sized.
+			_splitContainer.Panel2MinSize = 0;
+			base.OnLayout(Args);
+		}
+		ApplyNavigationPaneWidth(RememberedWidth);
+	}
+
+	protected override void SetClientSizeCore(int Width, int Height) {
+		if (_splitContainer == null || _navigationPaneWidth <= 0 || _updatingNavigationPaneWidth) {
+			base.SetClientSizeCore(Width, Height);
+			return;
+		}
+		var RememberedWidth = _navigationPaneWidth;
+		_updatingNavigationPaneWidth = true;
+		using (Tools.Scope.ExecuteOnDispose(() => _updatingNavigationPaneWidth = false)) {
+			// Form applies intermediate native bounds before storing the requested client size; only use the completed geometry.
+			_splitContainer.Panel2MinSize = 0;
+			base.SetClientSizeCore(Width, Height);
+		}
+		ApplyNavigationPaneWidth(RememberedWidth);
+	}
+
+	protected override void OnDpiChanged(DpiChangedEventArgs Args) {
+		// Wait for WinForms to scale the entire control tree before applying limits against the new window size.
+		var WasUpdating = _updatingNavigationPaneWidth;
+		_updatingNavigationPaneWidth = true;
+		using (Tools.Scope.ExecuteOnDispose(() => _updatingNavigationPaneWidth = WasUpdating)) {
+			_splitContainer.Panel2MinSize = 0;
+			base.OnDpiChanged(Args);
+		}
+		ApplyNavigationPaneWidth(_navigationPaneWidth);
 	}
 
 	private void UpdateNavigationPane(ApplicationScreen? Screen) {
@@ -530,18 +605,64 @@ public partial class BlockMainForm : MainForm, IBlockManager {
 		_splitContainer.SuspendLayout();
 		using var LayoutScope = Tools.Scope.ExecuteOnDispose(() => _splitContainer.ResumeLayout(true));
 		if (_splitContainer.Panel1Collapsed != Collapsed) {
-			if (Collapsed)
+			if (Collapsed && HasUsableNavigationPaneBounds)
 				_navigationPaneWidth = _splitContainer.SplitterDistance;
-			_splitContainer.Panel1Collapsed = Collapsed;
-			if (!Collapsed) {
-				var MaximumWidth = Math.Max(_splitContainer.Panel1MinSize, _splitContainer.Width - _splitContainer.SplitterWidth - _splitContainer.Panel2MinSize);
-				_splitContainer.SplitterDistance = Tools.Values.ClipValue((int)Math.Round(_navigationPaneWidth), _splitContainer.Panel1MinSize, MaximumWidth);
+			var RememberedWidth = _navigationPaneWidth;
+			var WasUpdating = _updatingNavigationPaneWidth;
+			_updatingNavigationPaneWidth = true;
+			using (Tools.Scope.ExecuteOnDispose(() => _updatingNavigationPaneWidth = WasUpdating)) {
+				_splitContainer.Panel2MinSize = 0;
+				_splitContainer.Panel1Collapsed = Collapsed;
 			}
+			ApplyNavigationPaneWidth(RememberedWidth);
 		}
 		_navigationPaneToggleButton.Checked = !Collapsed;
 		_navigationPaneToggleButton.Enabled = !ScreenFillsWindow;
 		_navigationPaneToggleButton.ToolTipText = $"{_navigationPaneToggleButton.Text} (Ctrl+Alt+M)";
 	}
+
+	private int GetMaximumNavigationPaneWidth(bool FitClientArea) {
+		var MaximumWidth = Math.Min(int.MaxValue, Math.Round(MaximumNavigationPaneWidth * (_navigationPaneDpi / 96.0)));
+		if (FitClientArea) {
+			// Keep the screen usable when the window is narrower than the configured sidebar limit plus its content.
+			var ContentWidth = Math.Max(_navigationPaneMinimumContentWidth, Math.Round(320 * (_navigationPaneDpi / 96.0)));
+			MaximumWidth = Math.Min(MaximumWidth, _splitContainer.Width - _splitContainer.SplitterWidth - ContentWidth);
+		}
+		return (int)Math.Max(_splitContainer.Panel1MinSize, MaximumWidth);
+	}
+
+	private void ApplyNavigationPaneWidth(double RequestedWidth) {
+		if (_updatingNavigationPaneWidth || IsDisposed || Disposing)
+			return;
+		_updatingNavigationPaneWidth = true;
+		using var UpdateScope = Tools.Scope.ExecuteOnDispose(() => _updatingNavigationPaneWidth = false);
+		_navigationPaneWidth = Tools.Values.ClipValue(RequestedWidth, _splitContainer.Panel1MinSize, GetMaximumNavigationPaneWidth(false));
+		// Minimize and intermediate layouts can have no legal divider position. Retain the preference until usable bounds return.
+		if (!HasUsableNavigationPaneBounds)
+			return;
+		_splitContainer.Panel2MinSize = 0;
+		if (_splitContainer.Panel1Collapsed) {
+			_splitContainer.Panel2MinSize = (int)Math.Round(_navigationPaneMinimumContentWidth);
+			return;
+		}
+		var MaximumWidth = GetMaximumNavigationPaneWidth(true);
+		var Width = Tools.Values.ClipValue((int)Math.Round(_navigationPaneWidth), _splitContainer.Panel1MinSize, MaximumWidth);
+		// Revealing an oversized hidden pane can leave stale negative content bounds until the divider is moved inside the window.
+		if (_splitContainer.SplitterDistance > Width)
+			_splitContainer.SplitterDistance = Width;
+		// Use the native drag range so reaching the limit does not cancel the user's mouse or keyboard gesture.
+		_splitContainer.Panel2MinSize = Math.Max((int)Math.Round(_navigationPaneMinimumContentWidth), _splitContainer.Width - _splitContainer.SplitterWidth - MaximumWidth);
+		if (_splitContainer.SplitterDistance != Width)
+			_splitContainer.SplitterDistance = Width;
+		_navigationPaneWidth = _splitContainer.SplitterDistance;
+	}
+
+	private void NavigationPaneSplitterMoved(object? Sender, SplitterEventArgs Args) {
+		if (HasUsableNavigationPaneBounds)
+			ApplyNavigationPaneWidth(_splitContainer.Panel1Collapsed ? _navigationPaneWidth : _splitContainer.SplitterDistance);
+	}
+
+	private void NavigationPaneSizeChanged(object? Sender, EventArgs Args) => ApplyNavigationPaneWidth(_navigationPaneWidth);
 
 	private void NavigationPaneToggle_Click(object? Sender, EventArgs Args) => NavigationPaneCollapsed = !NavigationPaneCollapsed;
 

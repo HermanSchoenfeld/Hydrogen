@@ -15,12 +15,22 @@ public partial class EnterAgeScreen : DemoWizardScreenBase {
 		InitializeComponent();
 	}
 
-	public override async Task Initialize() {
+	public override Task<Result> Validate() {
+		var Validation = int.TryParse(textBox1.Text, out var Age) && Age >= 0
+			? Result.Success
+			: Result.Error("Enter your age as a non-negative whole number.");
+		return Task.FromResult(Validation);
 	}
 
-	public override async Task<Result> Validate() {
-		return Result.Success;
+	public override Task OnNext() {
+		CopyUIToModel();
+		return Task.CompletedTask;
+	}
+
+	protected override void CopyUIToModel() => Model.Age = int.Parse(textBox1.Text);
+
+	protected override void CopyModelToUI() {
+		if (Wizard != null)
+			textBox1.Text = Model.Age?.ToString() ?? string.Empty;
 	}
 }
-
-

@@ -12,10 +12,10 @@ public class DemoWizardModel {
 
 	public string Name { get; set; }
 
-	public int Age { get; set; }
+	public int? Age { get; set; }
 
 
-	public static DemoWizardModel Default => new DemoWizardModel { Name = string.Empty, Age = 0 };
+	public static DemoWizardModel Default => new DemoWizardModel { Name = string.Empty };
 
 }
 
