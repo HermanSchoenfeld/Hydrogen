@@ -9,6 +9,8 @@
 using Sphere10.Framework.Utils.WinFormsTester.Wizard;
 using Sphere10.Framework.Windows.Forms;
 using Sphere10.Framework.Utils.WinFormsTester.Screens;
+using Sphere10.Framework.Application;
+using Microsoft.Extensions.DependencyInjection;
 using Menu = Sphere10.Framework.Windows.Forms.Menu;
 
 namespace Sphere10.Framework.Utils.WinFormsTester;
@@ -20,7 +22,32 @@ public class TestBlock : ApplicationBlock {
 			.WithName("Block 1")
 			.WithImage32x32(Resources.TestBlock32x32)
 			.WithImage8x8(Resources.TestBlock8x8)
-			.WithDefaultScreen<ObjectSpaceScreen>()
+			.WithDefaultScreen<ScreenHostingSettingsTestScreen>(title: "Settings")
+			.AddMenu(Menu => Menu
+				.WithText("Screen hosting")
+				.WithImage32x32(Resources.Tests32x32)
+				.ConfigureItem(Item => Item.AsScreenItem()
+					.WithText("Settings")
+					.WithScreen<ScreenHostingSettingsTestScreen>()
+					.AsSingleInstance()
+					.WithImage(Resources.Settings16x16)
+					.IsStartScreen()
+					.WithTitle("Settings"))
+				.ConfigureItem(Item => Item.AsScreenItem()
+					.WithText("New design")
+					.WithScreen<ScreenHostingDesignTestScreen>()
+					.AsMultiInstance()
+					.WithImage(Resources.Generic16x16)
+					.WithTitle("Design"))
+				.ConfigureItem(Item => Item.AsScreenItem()
+					.WithText("Plain screen (no bars)")
+					.WithScreen<ScreenHostingPlainTestScreen>()
+					.AsSingleInstance()
+					.WithImage(Resources.Generic16x16)
+					.WithTitle("Plain screen"))
+				.AddActionItem("Use SingleView", () => SetScreenMode(ScreenMode.SingleView), Resources.Generic16x16)
+				.AddActionItem("Use MultiView", () => SetScreenMode(ScreenMode.MultiView), Resources.Generic16x16)
+			)
 			.AddMenu(mb => mb
 				.WithText("Wizard")
 				.WithImage32x32(Resources.Wizard32x32)
@@ -84,7 +111,7 @@ public class TestBlock : ApplicationBlock {
 				.AddScreenItem<ValidationIndicatorTestScreen>("ValidationIndicator", Resources.Generic16x16)
 				.AddScreenItem<RegionToolTestScreen>("RegionTool", Resources.Generic16x16)
 				.AddScreenItem<CustomComboBoxScreen>("CustomComboBox", Resources.Generic16x16)
-				.AddScreenItem("Misc", typeof(MiscTestScreen), null, false, false, true)
+				.AddScreenItem("Misc", typeof(MiscTestScreen), null, false, false, false)
 				.AddScreenItem<ConnectionPanelTestScreen>("ConnectionPanel", Resources.Database16x16)
 				.AddScreenItem<DraggableControlsTestScreen>("DraggableControls", Resources.Generic16x16)
 				.AddScreenItem<EncryptedCompressionTestScreen>("EncryptedCompression", Resources.Generic16x16)
@@ -107,6 +134,13 @@ public class TestBlock : ApplicationBlock {
 				.AddScreenItem<ScreenC>("Option 3", Resources.Generic16x16)
 			)
 			.Build();
+	}
+
+	private static void SetScreenMode(ScreenMode Mode) {
+		var Form = (BlockMainForm)Sphere10Framework.Instance.ServiceProvider.GetRequiredService<IMainForm>();
+		Form.Status = Form.ScreenHost.TrySetScreenMode(Mode)
+			? $"Screen mode: {Mode}"
+			: "A screen blocked the mode change. Clear its cancellation checkbox and try again.";
 	}
 
 	public TestBlock()
