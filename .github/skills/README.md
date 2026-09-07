@@ -15,6 +15,7 @@ Task-specific skills for working in this repository. Load the skill that matches
 | [guards-and-scopes](guards-and-scopes/SKILL.md) | Argument/invariant validation (`Guard`), or resource/state cleanup via disposable scopes. |
 | [disposable-scopes](disposable-scopes/SKILL.md) | Acquiring a resource, entering a state, locking, or guaranteed cleanup — the `IScope`/`Tools.Scope`/synchronization/transaction scope idiom. |
 | [data-source](data-source/SKILL.md) | Implementing `IDataSource<T>` sync/async CRUD hierarchies (`SyncBatchDataSourceBase`, `AsyncBatchDataSourceBase`, etc.). |
+| [nhibernate-dal](nhibernate-dal/SKILL.md) | Application DAL scaffolding with the established `DataObjects`, `BusinessEntity` maps, `DatabaseManager`, `DataScope`, provider managers, and priming/demo generator names; includes the SQL `ApplicationDAC` profile. |
 | [crypto](crypto/SKILL.md) | Hashing, random bytes, digital signatures, key derivation. Never raw BCL crypto. |
 | [logging](logging/SKILL.md) | Adding log output; `ILogger`, `SystemLog`, decorators and sinks. |
 | [winforms-ui](winforms-ui/SKILL.md) | WinForms screens, wizards (`WizardBuilder`), application blocks (`ApplicationBlockBuilder`), `CrudGrid`. |
