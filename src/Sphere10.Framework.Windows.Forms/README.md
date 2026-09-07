@@ -280,6 +280,26 @@ The builder pattern supports:
 - **Fluent API**: Chain methods for clean, readable code
 - **Type-safe**: Compile-time checking with generics
 
+### Remembering the main window
+
+Enable automatic per-user window settings at application startup:
+
+```csharp
+Sphere10Framework.Instance
+	.BuildWinFormsApplication()
+	.UseMainForm<BlockMainForm>()
+	.UseMainFormSettings()
+	.StartWinFormsApplication();
+```
+
+`UseMainFormSettings()` restores the main window's normal bounds, monitor and maximized state, captures its placement on accepted closure, and writes it once through a framework shutdown task before settings providers are disposed. Moving, resizing, and dragging the menu divider do not write settings. Cancelled exit requests do not queue a save. A minimized window reopens in its last normal or maximized state. Missing monitors and changed working areas or DPI are handled by fitting the window onto an available display. Without saved settings, the configured initial size is used.
+
+`BlockMainForm` also saves the left navigation pane's width in the same `FormWindowSettings`, including its last expanded width while collapsed or temporarily hidden. The restored width scales with DPI and is clamped to the current navigation limits. With no saved width, the wider default applies.
+
+`FormWindowSettings` uses the existing `UserSettings` provider and `SettingsObject.Save()` contract. The default settings ID is `"MainForm"`; supply `SettingsID` to distinguish multiple main-window configurations. `UseMainFormSettings(false)` disables automatic persistence. Optional preference read/write failures are logged and do not prevent opening or closing the application.
+
+Other forms can keep `Tools.WinForms.AutoPersistWindowSettings(Form, SettingsID)` in a `using` scope for the window's lifetime to save once on accepted closure, or use `CaptureWindowSettings` and `RestoreWindowSettings` with their own `FormWindowSettings` instance. See the repository [user-settings skill](../../.github/skills/user-settings/SKILL.md) for settings classes, defaults, lifecycle and storage conventions.
+
 ### Multiple screens and detachable tabs
 
 `MainForm.ScreenMode` defaults to `ScreenMode.SingleView`, which shows one screen without a tab bar. Set it to `ScreenMode.MultiView` to keep multiple screens open in titled tabs. `BlockMainForm` inherits this property and hosts the tabs in its main content panel.
@@ -328,7 +348,7 @@ Detached windows use a compact caption with accessible **Re-dock**, **Minimize**
 - Drag tabs along the tab bar to see them move immediately; Escape restores the original position.
 - In a detached window, use the caption's **Re-dock** icon, or bring the window's title bar close to the main tab strip. Only the header band accepts drag docking; the screen content panel does not. A highlighted tab-sized **Release to dock** preview and text hint show the proposed position and screen title without changing tab widths, order, or selection. The highlight uses the ExplorerBar palette and follows the visible navigation pane's blue in `BlockMainForm`. Leaving the target or cancelling the drag clears the preview.
 
-Collapse and restore the entire left navigation pane with the **sidebar icon** in the main toolbar, or **Ctrl+Alt+M**. The icon remains available across screen switches and supplies Show/Hide sidebar tooltips. It does not reserve a separate header or collapsed gutter. `BlockMainForm.NavigationPaneCollapsed` exposes the preference. The pane remembers its width and collapsed state across screen switches. Filled screens temporarily hide navigation without changing that preference.
+The left navigation pane starts at 320 logical pixels wide and scales with the form. Drag its divider to choose a different width. `MaximumNavigationPaneWidth` defaults to 480 logical pixels at 96 DPI; the effective limit also reserves 320 logical pixels for the screen when space permits. Limits scale with DPI and clamp oversized saved widths. Minimized or temporarily undersized layouts defer divider updates until both panels fit; the remembered width remains available for restoration and settings capture. Collapse and restore the entire left navigation pane with the **sidebar icon** in the main toolbar, or **Ctrl+Alt+M**. The icon remains available across screen switches and supplies Show/Hide sidebar tooltips. It does not reserve a separate header or collapsed gutter. `BlockMainForm.NavigationPaneCollapsed` exposes the preference. The pane remembers its width and collapsed state across screen switches. Filled screens temporarily hide navigation without changing that preference.
 
 `MainForm.ScreenHost` exposes `ActivateScreen`, `ShowScreen`, `CloseScreen`, `CloseScreens`, `CanCloseScreens`, `UndockScreen`, `DockScreen`, `OpenScreens` and `Screens`. `ActiveScreen` identifies the selected docked screen; detached windows retain independent chrome. `Screens` also includes cached single-instance screens hidden in SingleView. `ActivateScreen` and menu navigation reuse an existing singleton. Direct `ShowScreen` calls reject a second singleton instance; the caller still owns a rejected instance. A screen belongs to one host at a time.
 

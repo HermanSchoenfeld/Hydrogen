@@ -14,7 +14,7 @@ using System.Windows.Forms;
 
 namespace Tools;
 
-public static class WinForms {
+public static partial class WinForms {
 	public struct IconInfo {
 		public bool fIcon;
 		public int xHotspot;

@@ -1,6 +1,6 @@
 # WinForms Tester
 
-Build and run `Sphere10.Framework.Utils.WinFormsTester.csproj` on Windows. The application starts with `BlockMainForm.ScreenMode = ScreenMode.MultiView` configured through `UseMainForm`. It uses `HighDpiMode.DpiUnaware` so Windows bitmap-scales the complete interface, preserving the legacy screen and dialog layouts. Shared build settings keep `ForceDesignerDPIUnaware=true` for the Visual Studio designer.
+Build and run `Sphere10.Framework.Utils.WinFormsTester.csproj` on Windows. The application starts with `BlockMainForm.ScreenMode = ScreenMode.MultiView` configured through `UseMainForm`. It uses `HighDpiMode.DpiUnaware` so Windows bitmap-scales the complete interface, preserving the legacy screen and dialog layouts. Shared build settings keep `ForceDesignerDPIUnaware=true` for the Visual Studio designer. `UseMainFormSettings()` enables per-user window placement: resize or move the main window, close it through an accepted exit, then restart to restore its size, monitor, maximized state, and left menu width. Settings are written once by the framework shutdown task after accepted exit. The menu starts at 320 logical pixels and can expand to 480, with a smaller limit when the content needs room. Drag the divider to test your own width, including closing with the menu collapsed; moving or resizing does not write settings.
 
 ## Screen hosting walkthrough
 

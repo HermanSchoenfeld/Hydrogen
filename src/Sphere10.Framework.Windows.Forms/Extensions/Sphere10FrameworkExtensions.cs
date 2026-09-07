@@ -54,6 +54,20 @@ public static class Sphere10FrameworkExtensions {
 		return builder;
 	}
 
+	/// <summary>Persists the main window's size, monitor, position and maximized state once during framework shutdown.</summary>
+	public static Sphere10FrameworkBuilder UseMainFormSettings(this Sphere10FrameworkBuilder Builder, bool AutoPersist = true, string SettingsID = "MainForm") {
+		Guard.ArgumentNotNull(Builder, nameof(Builder));
+		Guard.ArgumentNotNullOrEmpty(SettingsID, nameof(SettingsID));
+		Builder.ConfigureServices(Services => {
+			Services.AddSingleton(new MainFormSettingsOptions(AutoPersist, SettingsID));
+			if (!Services.HasImplementationFor<MainFormSettingsFinalizer>()) {
+				Services.AddSingleton<MainFormSettingsFinalizer>();
+				Services.AddSingleton<IApplicationFinalizer>(Provider => Provider.GetRequiredService<MainFormSettingsFinalizer>());
+			}
+		});
+		return Builder;
+	}
+
 	public static void StartWinFormsApplication(this Sphere10FrameworkBuilder builder) {
 		// Show splash with fade-in before framework loads (if configured)
 		SplashScreen Splash = null;
@@ -81,6 +95,11 @@ public static class Sphere10FrameworkExtensions {
 		}
 		if (_size != null)
 			((Form)MainForm).Size = _size.Value;
+
+		var SettingsOptions = builder.Framework.ServiceProvider.GetService<MainFormSettingsOptions>();
+		using var WindowSettingsScope = SettingsOptions?.AutoPersist == true
+			? builder.Framework.ServiceProvider.GetRequiredService<MainFormSettingsFinalizer>().Attach((Form)MainForm, SettingsOptions.SettingsID)
+			: null;
 
 		// Show main form, then fade out splash
 		if (Splash != null) {
@@ -162,4 +181,6 @@ public static class Sphere10FrameworkExtensions {
 
 		return Bitmap;
 	}
+
+	private sealed record MainFormSettingsOptions(bool AutoPersist, string SettingsID);
 }

@@ -76,7 +76,7 @@
     <value>5, 6, 5, 6</value>
   </data>
   <data name="_applicationBar.Size" type="System.Drawing.Size, System.Drawing">
-    <value>199, 379</value>
+    <value>320, 379</value>
   </data>
   <assembly alias="mscorlib" name="mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" />
   <data name="_applicationBar.TabIndex" type="System.Int32, mscorlib">
@@ -143,7 +143,7 @@
     <value>800, 379</value>
   </data>
   <data name="_splitContainer.SplitterDistance" type="System.Int32, mscorlib">
-    <value>199</value>
+    <value>320</value>
   </data>
   <data name="_splitContainer.TabIndex" type="System.Int32, mscorlib">
     <value>5</value>

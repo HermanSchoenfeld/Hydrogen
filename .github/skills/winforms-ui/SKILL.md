@@ -33,3 +33,6 @@ var wizard =
 ```
 - `Build()` requires a title, at least one screen, and a finish function (enforced via `Guard.Ensure`).
 - Follow the [builder-pattern](../builder-pattern/SKILL.md) skill when extending wizard configuration.
+
+## Remembered user preferences
+Use the [user-settings](../user-settings/SKILL.md) skill for preferences that survive application restarts, including the main form's size and monitor, page sizes, and filters.
