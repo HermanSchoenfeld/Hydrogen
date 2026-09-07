@@ -19,7 +19,7 @@ Build and run `Sphere10.Framework.Utils.WinFormsTester.csproj` on Windows. The a
 13. Move the application and detached screens between monitors at different scaling settings (for example 100%, 150%, and 200%). Windows should bitmap-scale the complete windows. Check that navigation labels and dialog buttons remain visible and that tab titles, close buttons, docking previews, and menu collapse/restore retain their layout.
 14. Open **Plain screen (no bars)** and detach it. Its content should start directly below the caption, with no empty menu, toolbar, or tab row. Edit the notes, re-dock, and detach again to check that the same content survives. Also check a regular Settings or Design screen: only their actual menus and toolbar should occupy space.
 
-The other control test screens remain available under their existing navigation sections and can now be opened side by side.
+The other control test screens remain available under their existing navigation sections and can now be opened side by side. The communications screen polls reports on a component-owned UI timer that stops when its handle is destroyed and resumes when recreated. Switching, detaching, re-docking, and closing that screen must not leave a callback invoking a missing handle. The **Hooks** screen batches worker events for a UI timer, stops its hooks while its handle is unavailable, and releases hook subscriptions and resources on close or direct disposal. Reopening or re-docking it must not leave callbacks updating a disposed screen.
 
 Automated coverage for hosting, dragging, navigation, exit, and native async dialogs is in `tests/Sphere10.Framework.Windows.Forms.Tests`:
 
